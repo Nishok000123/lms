@@ -27,6 +27,7 @@
 #include <Wt/WDate.h>
 
 #include "core/Exception.hpp"
+#include "core/LiteralString.hpp"
 #include "core/TaggedType.hpp"
 
 namespace lms::db
@@ -193,6 +194,12 @@ namespace lms::db
         Name,
     };
 
+    enum class TrackArtistLinkSortMethod
+    {
+        None,
+        OriginalDateDesc,
+    };
+
     enum class TrackEmbeddedImageSortMethod
     {
         None,
@@ -220,6 +227,7 @@ namespace lms::db
         AbsoluteFilePath,
         Name,
         DateDescAndRelease,
+        OriginalDateDescAndRelease,
         Release,   // order by disc/track number
         TrackList, // order by asc order in tracklist
         TrackNumber,
@@ -272,6 +280,8 @@ namespace lms::db
         Remixer = 9,
         Writer = 10,
     };
+
+    core::LiteralString trackArtistLinkTypeToString(TrackArtistLinkType type);
 
     // User selectable transcoding output formats
     enum class TranscodingOutputFormat
