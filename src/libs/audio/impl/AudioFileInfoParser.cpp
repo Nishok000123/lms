@@ -17,21 +17,25 @@
  * along with LMS.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#pragma once
+#include <memory>
+
+#include "audio/IAudioFileInfoParser.hpp"
+
+#include "ffmpeg/AudioFileInfoParser.hpp"
+#include "taglib/AudioFileInfoParser.hpp"
 
 namespace lms::audio
 {
-    class AudioProperties;
-    class IImageReader;
-    class ITagReader;
-
-    class IAudioFileInfo
+    std::unique_ptr<IAudioFileInfoParser> createAudioFileInfoParser(AudioFileInfoParserBackend backend)
     {
-    public:
-        virtual ~IAudioFileInfo() = default;
+        switch (backend)
+        {
+        case AudioFileInfoParserBackend::TagLib:
+            return std::make_unique<taglib::AudioFileInfoParser>();
+        case AudioFileInfoParserBackend::FFmpeg:
+            return std::make_unique<ffmpeg::AudioFileInfoParser>();
+        }
 
-        virtual const AudioProperties* getAudioProperties() const = 0; // may be null even if requested, due to backend limitation
-        virtual const IImageReader* getImageReader() const = 0;
-        virtual const ITagReader* getTagReader() const = 0;
-    };
+        return nullptr;
+    }
 } // namespace lms::audio

@@ -19,19 +19,21 @@
 
 #pragma once
 
-namespace lms::audio
+#include <memory>
+#include <vector>
+
+#include "audio/IAudioFileInfoParser.hpp"
+
+namespace lms::scanner
 {
-    class AudioProperties;
-    class IImageReader;
-    class ITagReader;
-
-    class IAudioFileInfo
+    struct AudioFileInfoParserSet
     {
-    public:
-        virtual ~IAudioFileInfo() = default;
+        std::unique_ptr<audio::IAudioFileInfoParser> taglibParser;
+        std::unique_ptr<audio::IAudioFileInfoParser> ffmpegParser;
+        std::vector<std::filesystem::path> supportedExtensions;
 
-        virtual const AudioProperties* getAudioProperties() const = 0; // may be null even if requested, due to backend limitation
-        virtual const IImageReader* getImageReader() const = 0;
-        virtual const ITagReader* getTagReader() const = 0;
+        audio::AudioFileInfoParseOptions::AudioPropertiesReadStyle audioPropertiesReadStyle; // a bit hacky to have this here
     };
-} // namespace lms::audio
+
+    AudioFileInfoParserSet createAudioFileInfoParserSet();
+} // namespace lms::scanner

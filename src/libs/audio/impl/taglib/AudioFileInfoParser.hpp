@@ -19,19 +19,14 @@
 
 #pragma once
 
-namespace lms::audio
+#include "audio/IAudioFileInfoParser.hpp"
+
+namespace lms::audio::taglib
 {
-    class AudioProperties;
-    class IImageReader;
-    class ITagReader;
-
-    class IAudioFileInfo
+    class AudioFileInfoParser : public IAudioFileInfoParser
     {
-    public:
-        virtual ~IAudioFileInfo() = default;
-
-        virtual const AudioProperties* getAudioProperties() const = 0; // may be null even if requested, due to backend limitation
-        virtual const IImageReader* getImageReader() const = 0;
-        virtual const ITagReader* getTagReader() const = 0;
+    private:
+        std::unique_ptr<IAudioFileInfo> parse(const std::filesystem::path& p, const AudioFileInfoParseOptions& parseOptions = AudioFileInfoParseOptions{}) const override;
+        std::span<const std::filesystem::path> getSupportedExtensions() const override;
     };
-} // namespace lms::audio
+} // namespace lms::audio::taglib
