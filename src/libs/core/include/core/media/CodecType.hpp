@@ -19,28 +19,34 @@
 
 #pragma once
 
-#include <functional>
-#include <span>
-#include <string>
+#include "core/LiteralString.hpp"
 
-#include "core/media/ImageType.hpp"
-
-namespace lms::audio
+namespace lms::core::media
 {
-    struct Image
+    enum class CodecType
     {
-        core::media::ImageType type{ core::media::ImageType::Unknown };
-        std::string mimeType{ "application/octet-stream" };
-        std::string description;
-        std::span<const std::byte> data;
+        AAC,
+        AC3,
+        ALAC, // Apple Lossless Audio Codec (ALAC)
+        APE,  // Monkey's Audio
+        DSD,  // DSD
+        EAC3,
+        FLAC, // Flac
+        MP3,
+        MP4ALS, // MPEG-4 Audio Lossless Coding
+        MPC7,   // Musepack
+        MPC8,   // Musepack
+        Opus,   // Opus
+        PCM,
+        Shorten, // Shorten (shn)
+        TrueAudio,
+        Vorbis,
+        WavPack, // WavPack
+        WMA1,
+        WMA2,
+        WMA9Pro,
+        WMA9Lossless,
     };
 
-    class IImageReader
-    {
-    public:
-        virtual ~IImageReader() = default;
-
-        using ImageVisitor = std::function<void(const Image& image)>;
-        virtual void visitImages(const ImageVisitor& visitor) const = 0;
-    };
-} // namespace lms::audio
+    core::LiteralString codecTypeToString(CodecType type);
+} // namespace lms::core::media

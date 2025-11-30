@@ -19,28 +19,11 @@
 
 #pragma once
 
-#include <functional>
-#include <span>
-#include <string>
+#include "core/LiteralString.hpp"
+#include "core/media/CodecType.hpp"
+#include "core/media/ContainerType.hpp"
 
-#include "core/media/ImageType.hpp"
-
-namespace lms::audio
+namespace lms::core::media
 {
-    struct Image
-    {
-        core::media::ImageType type{ core::media::ImageType::Unknown };
-        std::string mimeType{ "application/octet-stream" };
-        std::string description;
-        std::span<const std::byte> data;
-    };
-
-    class IImageReader
-    {
-    public:
-        virtual ~IImageReader() = default;
-
-        using ImageVisitor = std::function<void(const Image& image)>;
-        virtual void visitImages(const ImageVisitor& visitor) const = 0;
-    };
-} // namespace lms::audio
+    core::LiteralString getMimeType(ContainerType container, CodecType codec);
+}

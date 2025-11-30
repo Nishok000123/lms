@@ -19,28 +19,22 @@
 
 #pragma once
 
-#include <functional>
-#include <span>
-#include <string>
+#include <chrono>
+#include <optional>
 
-#include "core/media/ImageType.hpp"
+#include "core/media/CodecType.hpp"
+#include "core/media/ContainerType.hpp"
 
 namespace lms::audio
 {
-    struct Image
+    struct AudioProperties
     {
-        core::media::ImageType type{ core::media::ImageType::Unknown };
-        std::string mimeType{ "application/octet-stream" };
-        std::string description;
-        std::span<const std::byte> data;
-    };
-
-    class IImageReader
-    {
-    public:
-        virtual ~IImageReader() = default;
-
-        using ImageVisitor = std::function<void(const Image& image)>;
-        virtual void visitImages(const ImageVisitor& visitor) const = 0;
+        core::media::ContainerType container;
+        core::media::CodecType codec;
+        std::chrono::milliseconds duration;
+        unsigned bitrate;
+        unsigned channelCount;
+        unsigned sampleRate;
+        std::optional<unsigned> bitsPerSample;
     };
 } // namespace lms::audio
