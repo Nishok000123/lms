@@ -19,36 +19,24 @@
 
 #pragma once
 
-#include "core/LiteralString.hpp"
+#include <filesystem>
 
-namespace lms::core::media
+#include "audio/AudioProperties.hpp"
+
+#include "AudioFileId.hpp"
+
+namespace lms::db
 {
-    enum class CodecType
+    class Session;
+}
+
+namespace lms::api::subsonic
+{
+    struct AudioFileInfo
     {
-        AAC,
-        AC3,
-        ALAC, // Apple Lossless Audio Codec (ALAC)
-        APE,  // Monkey's Audio
-        DSD,  // DSD
-        EAC3,
-        FLAC, // Flac
-        MP3,
-        MP4ALS, // MPEG-4 Audio Lossless Coding
-        MPC7,   // Musepack
-        MPC8,   // Musepack
-        Opus,   // Opus
-        PCM,
-        Shorten, // Shorten (shn)
-        TrueAudio,
-        Vorbis,
-        WavPack, // WavPack
-        WMA1,
-        WMA2,
-        WMA9Pro,
-        WMA9Lossless,
+        std::filesystem::path path;
+        audio::AudioProperties audioProperties;
     };
 
-    core::LiteralString codecTypeToString(CodecType type);
-
-    bool isCodecLossless(CodecType type);
-} // namespace lms::core::media
+    AudioFileInfo getAudioFileInfo(db::Session& session, AudioFileId audioFileId); // throw RequestedDataNotFoundError on failure
+} // namespace lms::api::subsonic
