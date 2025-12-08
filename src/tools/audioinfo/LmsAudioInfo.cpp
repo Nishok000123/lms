@@ -27,10 +27,12 @@
 
 #include "core/ILogger.hpp"
 #include "core/String.hpp"
+#include "core/media/MimeType.hpp"
 
-#include "audio/AudioTypes.hpp"
+#include "audio/AudioProperties.hpp"
 #include "audio/Exception.hpp"
 #include "audio/IAudioFileInfo.hpp"
+#include "audio/IAudioFileInfoParser.hpp"
 #include "audio/IImageReader.hpp"
 #include "audio/ITagReader.hpp"
 
@@ -38,14 +40,15 @@ namespace lms::audio
 {
     std::ostream& operator<<(std::ostream& os, const AudioProperties& audioProperties)
     {
-        os << "\tDuration: " << std::fixed << std::setprecision(2) << std::chrono::duration_cast<std::chrono::duration<float>>(audioProperties.duration) << std::endl;
-        os << "\tContainer: " << containerTypeToString(audioProperties.container) << std::endl;
-        os << "\tCodec: " << codecTypeToString(audioProperties.codec) << std::endl;
-        os << "\tBitrate: " << audioProperties.bitrate << " bps" << std::endl;
+        os << "\tDuration: " << std::fixed << std::setprecision(2) << std::chrono::duration_cast<std::chrono::duration<float>>(audioProperties.duration) << '\n';
+        os << "\tContainer: " << core::media::containerToString(audioProperties.container) << '\n';
+        os << "\tCodec: " << core::media::getCodecDesc(audioProperties.codec).name << '\n';
+        os << "\tMimeType: " << core::media::getMimeType(audioProperties.container, audioProperties.codec) << '\n';
+        os << "\tBitrate: " << audioProperties.bitrate << " bps" << '\n';
         if (audioProperties.bitsPerSample)
-            os << "\tBitsPerSample: " << *audioProperties.bitsPerSample << std::endl;
-        os << "\tChannelCount: " << audioProperties.channelCount << std::endl;
-        os << "\tSampleRate: " << audioProperties.sampleRate << std::endl;
+            os << "\tBitsPerSample: " << *audioProperties.bitsPerSample << '\n';
+        os << "\tChannelCount: " << audioProperties.channelCount << '\n';
+        os << "\tSampleRate: " << audioProperties.sampleRate << '\n';
 
         return os;
     }
@@ -114,7 +117,7 @@ namespace lms::audio
 
     std::ostream& operator<<(std::ostream& os, const Image& image)
     {
-        os << "\ttype = " << imageTypeToString(image.type) << std::endl;
+        os << "\ttype = " << core::media::imageTypeToString(image.type) << std::endl;
         if (!image.description.empty())
             os << "\tdesc: " << image.description << std::endl;
         os << "\tmimeType: " << image.mimeType << std::endl;
@@ -133,11 +136,21 @@ namespace lms::audio
 
     void displayInfo(const IAudioFileInfo& fileInfo)
     {
-        std::cout << "Audio properties:\n"
-                  << fileInfo.getAudioProperties() << std::endl;
+        if (fileInfo.getAudioProperties())
+        {
+            std::cout << "Audio properties:\n"
+                      << *fileInfo.getAudioProperties() << "\n";
+        }
+        else
+        {
+            std::cout << "Failed to parse audio properties!\n\n";
+        }
 
-        displayImages(fileInfo.getImageReader());
-        displayTags(fileInfo.getTagReader());
+        if (fileInfo.getImageReader())
+            displayImages(*fileInfo.getImageReader());
+
+        if (fileInfo.getTagReader())
+            displayTags(*fileInfo.getTagReader());
 
         std::cout << "\n";
     }
@@ -200,14 +213,15 @@ int main(int argc, char* argv[])
             return EXIT_FAILURE;
         }
 
-        audio::ParserOptions parserOptions;
-        parserOptions.enableExtraDebugLogs = true;
+        audio::AudioFileInfoParserBackend parserBackend{ audio::defaultAudioFileInfoParserBackend };
         if (core::stringUtils::stringCaseInsensitiveEqual(vm["parser"].as<std::string>(), "taglib"))
-            parserOptions.parser = audio::ParserOptions::Parser::TagLib;
+            parserBackend = audio::AudioFileInfoParserBackend::TagLib;
         else if (core::stringUtils::stringCaseInsensitiveEqual(vm["parser"].as<std::string>(), "ffmpeg"))
-            parserOptions.parser = audio::ParserOptions::Parser::FFmpeg;
+            parserBackend = audio::AudioFileInfoParserBackend::FFmpeg;
         else
             throw program_options::validation_error{ program_options::validation_error::invalid_option_value, "parser" };
+
+        const auto parser{ audio::createAudioFileInfoParser(parserBackend) };
 
         const auto& inputFiles{ vm["file"].as<std::vector<std::string>>() };
         // log to stdout
@@ -219,8 +233,11 @@ int main(int argc, char* argv[])
 
             try
             {
+                audio::AudioFileInfoParseOptions parseOptions;
+                parseOptions.enableExtraDebugLogs = true;
+
                 std::cout << "Parsing file " << file << ":\n";
-                const auto audioFileInfo{ audio::parseAudioFile(file, parserOptions) };
+                const auto audioFileInfo{ parser->parse(file, parseOptions) };
 
                 displayInfo(*audioFileInfo);
             }

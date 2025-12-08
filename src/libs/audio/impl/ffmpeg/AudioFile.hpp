@@ -27,7 +27,8 @@
 #include <string>
 #include <vector>
 
-#include "audio/AudioTypes.hpp"
+#include "core/media/Codec.hpp"
+#include "core/media/Container.hpp"
 
 extern "C"
 {
@@ -36,7 +37,7 @@ extern "C"
 
 namespace lms::audio::ffmpeg
 {
-    struct Picture
+    struct PictureView
     {
         std::string mimeType;
         std::span<const std::byte> data; // valid as long as IAudioFile exists
@@ -44,17 +45,17 @@ namespace lms::audio::ffmpeg
 
     struct ContainerInfo
     {
-        std::optional<ContainerType> container;
+        std::optional<core::media::Container> container;
         std::string containerName;
 
-        std::size_t bitrate{};
+        std::optional<std::size_t> bitrate;
         std::chrono::milliseconds duration{};
     };
 
     struct StreamInfo
     {
         size_t index{};
-        std::optional<CodecType> codec;
+        std::optional<core::media::Codec> codec;
         std::string codecName;
 
         std::optional<size_t> bitrate;
@@ -75,12 +76,12 @@ namespace lms::audio::ffmpeg
 
         const std::filesystem::path& getPath() const;
         ContainerInfo getContainerInfo() const;
-        MetadataMap getMetaData() const;
+        MetadataMap extractMetaData() const;
         std::vector<StreamInfo> getStreamInfo() const;
         std::optional<StreamInfo> getBestStreamInfo() const;
         std::optional<std::size_t> getBestStreamIndex() const;
         bool hasAttachedPictures() const;
-        void visitAttachedPictures(std::function<void(const Picture&, const MetadataMap&)> func) const;
+        void visitAttachedPictures(std::function<void(const PictureView&, const MetadataMap&)> func) const;
 
     private:
         std::optional<StreamInfo> getStreamInfo(std::size_t streamIndex) const;

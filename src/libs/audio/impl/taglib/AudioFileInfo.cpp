@@ -43,8 +43,11 @@
     #include <taglib/shortenfile.h>
 #endif
 
-#include "audio/AudioTypes.hpp"
+#include "core/ILogger.hpp"
+
+#include "audio/AudioProperties.hpp"
 #include "audio/IAudioFileInfo.hpp"
+#include "audio/IAudioFileInfoParser.hpp"
 
 #include "ImageReader.hpp"
 #include "TagReader.hpp"
@@ -54,60 +57,78 @@ namespace lms::audio::taglib
 {
     namespace
     {
-        AudioProperties computeAudioProperties(const ::TagLib::File& file)
+        std::optional<AudioProperties> computeAudioProperties(const ::TagLib::File& file, const std::filesystem::path& filePath)
         {
             assert(file.audioProperties());
 
             AudioProperties audioProperties;
 
             {
-                const ::TagLib::AudioProperties& properties{ *file.audioProperties() };
+                const ::TagLib::AudioProperties* properties{ file.audioProperties() };
+                if (!properties)
+                {
+                    LMS_LOG(AUDIO, DEBUG, "Cannot determine audio properties in " << filePath);
+                    return std::nullopt;
+                }
 
                 // Common properties
-                audioProperties.bitrate = static_cast<std::size_t>(properties.bitrate() * 1000);
+                audioProperties.bitrate = static_cast<std::size_t>(properties->bitrate() * 1000);
                 if (audioProperties.bitrate == 0)
-                    throw AudioFileParsingException{ "Cannot determine bitrate" };
+                {
+                    LMS_LOG(AUDIO, DEBUG, "Cannot determine bitrate in " << filePath);
+                    return std::nullopt;
+                }
 
-                audioProperties.channelCount = static_cast<std::size_t>(properties.channels());
+                audioProperties.channelCount = static_cast<std::size_t>(properties->channels());
                 if (audioProperties.channelCount == 0)
-                    throw AudioFileParsingException{ "Cannot determine channel count" };
+                {
+                    LMS_LOG(AUDIO, DEBUG, "Cannot determine channel count in " << filePath);
+                    return std::nullopt;
+                }
 
-                audioProperties.duration = std::chrono::milliseconds{ properties.lengthInMilliseconds() };
+                audioProperties.duration = std::chrono::milliseconds{ properties->lengthInMilliseconds() };
                 if (audioProperties.duration == decltype(audioProperties.duration)::zero())
-                    throw AudioFileParsingException{ "Cannot determine duration" };
+                {
+                    LMS_LOG(AUDIO, DEBUG, "Cannot determine duration in " << filePath);
+                    return std::nullopt;
+                }
 
-                audioProperties.sampleRate = static_cast<std::size_t>(properties.sampleRate());
+                audioProperties.sampleRate = static_cast<std::size_t>(properties->sampleRate());
                 if (audioProperties.sampleRate == 0)
-                    throw AudioFileParsingException{ "Cannot determine sample rate" };
+                {
+                    LMS_LOG(AUDIO, DEBUG, "Cannot determine sample rate in " << filePath);
+                    return std::nullopt;
+                }
             }
 
             // Guess container from the file type
             if (const auto* apeFile{ dynamic_cast<const ::TagLib::APE::File*>(&file) })
             {
-                audioProperties.container = ContainerType::APE;
-                audioProperties.codec = CodecType::APE; // TODO version?
+                audioProperties.container = core::media::Container::APE;
+                audioProperties.codec = core::media::Codec::APE; // TODO version?
                 audioProperties.bitsPerSample = apeFile->audioProperties()->bitsPerSample();
             }
             else if (const auto* asfFile{ dynamic_cast<const ::TagLib::ASF::File*>(&file) })
             {
-                audioProperties.container = ContainerType::ASF;
+                audioProperties.container = core::media::Container::ASF;
 
                 switch (asfFile->audioProperties()->codec())
                 {
                 case ::TagLib::ASF::Properties::Codec::WMA1:
-                    audioProperties.codec = CodecType::WMA1;
+                    audioProperties.codec = core::media::Codec::WMA1;
                     break;
                 case ::TagLib::ASF::Properties::Codec::WMA2:
-                    audioProperties.codec = CodecType::WMA2;
+                    audioProperties.codec = core::media::Codec::WMA2;
                     break;
                 case ::TagLib::ASF::Properties::Codec::WMA9Lossless:
-                    audioProperties.codec = CodecType::WMA9Lossless;
+                    audioProperties.codec = core::media::Codec::WMA9Lossless;
                     break;
                 case ::TagLib::ASF::Properties::Codec::WMA9Pro:
-                    audioProperties.codec = CodecType::WMA9Pro;
+                    audioProperties.codec = core::media::Codec::WMA9Pro;
                     break;
                 case ::TagLib::ASF::Properties::Codec::Unknown:
-                    throw AudioFileParsingException{ "Unhandled ASF codec" };
+                    LMS_LOG(AUDIO, DEBUG, "Unhandled ASF codec in " << filePath);
+                    return std::nullopt;
                 }
 
                 audioProperties.bitsPerSample = asfFile->audioProperties()->bitsPerSample();
@@ -115,110 +136,116 @@ namespace lms::audio::taglib
 #if LMS_TAGLIB_HAS_DSF
             else if (const auto* dsfFile{ dynamic_cast<const ::TagLib::DSF::File*>(&file) })
             {
-                audioProperties.container = ContainerType::DSF;
-                audioProperties.codec = CodecType::DSD;
+                audioProperties.container = core::media::Container::DSF;
+                audioProperties.codec = core::media::Codec::DSD;
                 audioProperties.bitsPerSample = dsfFile->audioProperties()->bitsPerSample();
             }
 #endif // LMS_TAGLIB_HAS_DSF
             else if (const auto* flacFile{ dynamic_cast<const ::TagLib::FLAC::File*>(&file) })
             {
-                audioProperties.container = ContainerType::FLAC;
-                audioProperties.codec = CodecType::FLAC;
+                audioProperties.container = core::media::Container::FLAC;
+                audioProperties.codec = core::media::Codec::FLAC;
                 audioProperties.bitsPerSample = flacFile->audioProperties()->bitsPerSample();
             }
             else if (const auto* mp4File{ dynamic_cast<const ::TagLib::MP4::File*>(&file) })
             {
-                audioProperties.container = ContainerType::MP4;
+                audioProperties.container = core::media::Container::MP4;
                 switch (mp4File->audioProperties()->codec())
                 {
                 case ::TagLib::MP4::Properties::Codec::AAC:
-                    audioProperties.codec = CodecType::AAC;
+                    audioProperties.codec = core::media::Codec::AAC;
                     break;
                 case ::TagLib::MP4::Properties::Codec::ALAC:
-                    audioProperties.codec = CodecType::ALAC;
+                    audioProperties.codec = core::media::Codec::ALAC;
                     break;
                 case ::TagLib::MP4::Properties::Codec::Unknown:
-                    throw AudioFileParsingException{ "Unhandled MP4 codec" };
+                    LMS_LOG(AUDIO, DEBUG, "Unhandled MP4 codec in " << filePath);
+                    return std::nullopt;
                 }
 
                 audioProperties.bitsPerSample = mp4File->audioProperties()->bitsPerSample();
             }
             else if (const auto* mpcFile{ dynamic_cast<const ::TagLib::MPC::File*>(&file) })
             {
-                audioProperties.container = ContainerType::MPC;
+                audioProperties.container = core::media::Container::MPC;
 
                 switch (mpcFile->audioProperties()->mpcVersion())
                 {
                 case 7:
-                    audioProperties.codec = CodecType::MPC7;
+                    audioProperties.codec = core::media::Codec::MPC7;
                     break;
                 case 8:
-                    audioProperties.codec = CodecType::MPC8;
+                    audioProperties.codec = core::media::Codec::MPC8;
                     break;
                 default:
-                    throw AudioFileParsingException{ "Unhandled MPC codec" };
+                    LMS_LOG(AUDIO, DEBUG, "Unhandled MPC codec version " << mpcFile->audioProperties()->mpcVersion() << " in " << filePath);
+                    return std::nullopt;
                 }
             }
             else if (const auto* mpegFile{ dynamic_cast<const ::TagLib::MPEG::File*>(&file) })
             {
                 const auto& properties{ *mpegFile->audioProperties() };
 
-                audioProperties.container = ContainerType::MPEG;
+                audioProperties.container = core::media::Container::MPEG;
                 if ((properties.version() == TagLib::MPEG::Header::Version::Version1 || properties.version() == TagLib::MPEG::Header::Version::Version2 || properties.version() == TagLib::MPEG::Header::Version::Version2_5)
                     && mpegFile->audioProperties()->layer() == 3)
-                    audioProperties.codec = CodecType::MP3; // could be MPEG-1 layer 3 or MPEG-2(.5) layer 3
+                    audioProperties.codec = core::media::Codec::MP3; // could be MPEG-1 layer 3 or MPEG-2(.5) layer 3
 #if LMS_TAGLIB_HAS_ADTS
                 else if (mpegFile->audioProperties()->isADTS()) // likely AAC
-                    audioProperties.codec = CodecType::AAC;
+                    audioProperties.codec = core::media::Codec::AAC;
 #endif
                 else
-                    throw AudioFileParsingException{ "Unhandled MPEG codec" };
+                {
+                    LMS_LOG(AUDIO, DEBUG, "Unhandled MPEG codec in " << filePath);
+                    return std::nullopt;
+                }
             }
             else if (dynamic_cast<const ::TagLib::Ogg::Opus::File*>(&file))
             {
-                audioProperties.container = ContainerType::Ogg;
-                audioProperties.codec = CodecType::Opus;
+                audioProperties.container = core::media::Container::Ogg;
+                audioProperties.codec = core::media::Codec::Opus;
             }
             else if (dynamic_cast<const ::TagLib::Ogg::Vorbis::File*>(&file))
             {
-                audioProperties.container = ContainerType::Ogg;
-                audioProperties.codec = CodecType::Vorbis;
+                audioProperties.container = core::media::Container::Ogg;
+                audioProperties.codec = core::media::Codec::Vorbis;
             }
             else if (const auto* aiffFile{ dynamic_cast<const ::TagLib::RIFF::AIFF::File*>(&file) })
             {
-                audioProperties.container = ContainerType::AIFF;
-                audioProperties.codec = CodecType::PCM;
+                audioProperties.container = core::media::Container::AIFF;
+                audioProperties.codec = core::media::Codec::PCM;
                 audioProperties.bitsPerSample = aiffFile->audioProperties()->bitsPerSample();
             }
             else if (const auto* wavFile{ dynamic_cast<const ::TagLib::RIFF::WAV::File*>(&file) })
             {
-                audioProperties.container = ContainerType::WAV;
-                audioProperties.codec = CodecType::PCM;
+                audioProperties.container = core::media::Container::WAV;
+                audioProperties.codec = core::media::Codec::PCM;
                 audioProperties.bitsPerSample = wavFile->audioProperties()->bitsPerSample();
             }
 #if LMS_TAGLIB_HAS_SHORTEN
             else if (const auto* shortenFile{ dynamic_cast<const ::TagLib::Shorten::File*>(&file) })
             {
-                audioProperties.container = ContainerType::Shorten;
-                audioProperties.codec = CodecType::Shorten;
+                audioProperties.container = core::media::Container::Shorten;
+                audioProperties.codec = core::media::Codec::Shorten;
                 audioProperties.bitsPerSample = shortenFile->audioProperties()->bitsPerSample();
             }
 #endif // LMS_TAGLIB_HAS_SHORTEN
             else if (const auto* trueAudioFile{ dynamic_cast<const ::TagLib::TrueAudio::File*>(&file) })
             {
-                audioProperties.container = ContainerType::TrueAudio;
-                audioProperties.codec = CodecType::TrueAudio;
+                audioProperties.container = core::media::Container::TrueAudio;
+                audioProperties.codec = core::media::Codec::TrueAudio;
                 audioProperties.bitsPerSample = trueAudioFile->audioProperties()->bitsPerSample();
             }
             else if (const auto* wavPackFile{ dynamic_cast<const ::TagLib::WavPack::File*>(&file) })
             {
-                audioProperties.container = ContainerType::WavPack;
-                audioProperties.codec = CodecType::WavPack;
+                audioProperties.container = core::media::Container::WavPack;
+                audioProperties.codec = core::media::Codec::WavPack;
                 audioProperties.bitsPerSample = wavPackFile->audioProperties()->bitsPerSample();
             }
             else
             {
-                throw AudioFileParsingException{ "Unhandled file type" };
+                LMS_LOG(AUDIO, DEBUG, "Unhandled file type in " << filePath);
+                return std::nullopt;
             }
 
             if (audioProperties.bitsPerSample && *audioProperties.bitsPerSample == 0)
@@ -228,30 +255,32 @@ namespace lms::audio::taglib
         }
     } // namespace
 
-    AudioFileInfo::AudioFileInfo(const std::filesystem::path& filePath, ParserOptions::AudioPropertiesReadStyle readStyle, bool enableExtraDebugLogs)
+    AudioFileInfo::AudioFileInfo(const std::filesystem::path& filePath, const AudioFileInfoParseOptions& parseOptions)
         : _filePath{ filePath }
-        , _file{ utils::parseFile(filePath, readStyle) }
-        , _audioProperties{ std::make_unique<AudioProperties>(computeAudioProperties(*_file)) }
-        , _tagReader{ std::make_unique<TagReader>(*_file, enableExtraDebugLogs) }
-        , _imageReader{ std::make_unique<ImageReader>(*_file) }
+        , _file{ utils::parseFile(filePath, parseOptions.audioPropertiesReadStyle) }
+        , _audioProperties{ computeAudioProperties(*_file, filePath) }
     {
+        if (parseOptions.readTags)
+            _tagReader = std::make_unique<TagReader>(*_file, parseOptions.enableExtraDebugLogs);
+
+        if (parseOptions.readImages)
+            _imageReader = std::make_unique<ImageReader>(*_file);
     }
 
     AudioFileInfo::~AudioFileInfo() = default;
 
-    const AudioProperties& AudioFileInfo::getAudioProperties() const
+    const AudioProperties* AudioFileInfo::getAudioProperties() const
     {
-        return *_audioProperties;
+        return _audioProperties.has_value() ? &_audioProperties.value() : nullptr;
     }
 
-    const IImageReader& AudioFileInfo::getImageReader() const
+    const IImageReader* AudioFileInfo::getImageReader() const
     {
-        return *_imageReader;
+        return _imageReader.get();
     }
 
-    const ITagReader& AudioFileInfo::getTagReader() const
+    const ITagReader* AudioFileInfo::getTagReader() const
     {
-        return *_tagReader;
+        return _tagReader.get();
     }
-
 } // namespace lms::audio::taglib

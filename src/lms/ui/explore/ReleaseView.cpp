@@ -19,18 +19,17 @@
 
 #include "ReleaseView.hpp"
 
-#include <Wt/WContainerWidget.h>
 #include <map>
+#include <string>
 
 #include <Wt/WAnchor.h>
+#include <Wt/WContainerWidget.h>
 #include <Wt/WImage.h>
 #include <Wt/WPushButton.h>
 #include <Wt/WTemplate.h>
 
 #include "core/String.hpp"
 
-#include "audio/AudioTypes.hpp"
-#include "audio/IAudioFileInfo.hpp"
 #include "database/Session.hpp"
 #include "database/Types.hpp"
 #include "database/objects/Artist.hpp"
@@ -140,20 +139,20 @@ namespace lms::ui
                 releaseInfo->bindString("release-labels", core::stringUtils::joinStrings(labels, " · "));
             }
 
-            // TODO: save in DB and aggregate all this
-            for (const db::Track::pointer& track : db::Track::find(LmsApp->getDbSession(), db::Track::FindParameters{}.setRelease(releaseId).setRange(db::Range{ 0, 1 })).results)
+            // Codecs
             {
-                try
+                std::string codecStr;
+                for (core::media::Codec codec : release->getCodecs())
                 {
-                    if (const auto audioFile{ audio::parseAudioFile(track->getAbsoluteFilePath()) })
-                    {
-                        releaseInfo->setCondition("if-has-codec", true);
-                        releaseInfo->bindString("codec", audio::codecTypeToString(audioFile->getAudioProperties().codec).c_str(), Wt::TextFormat::Plain);
-                        break;
-                    }
+                    if (!codecStr.empty())
+                        codecStr += " · ";
+                    codecStr += core::media::getCodecDesc(codec).name.str();
                 }
-                catch (const audio::Exception& e)
+
+                if (!codecStr.empty())
                 {
+                    releaseInfo->setCondition("if-has-codec", true);
+                    releaseInfo->bindString("codec", codecStr, Wt::TextFormat::Plain);
                 }
             }
 
@@ -256,11 +255,6 @@ namespace lms::ui
             refreshView();
         });
 
-        _filters.updated().connect([this] {
-            _needForceRefresh = true;
-            refreshView();
-        });
-
         refreshView();
     }
 
@@ -272,12 +266,11 @@ namespace lms::ui
         const auto releaseId{ extractReleaseIdFromInternalPath() };
 
         // consider everything is up to date is the same release is being rendered
-        if (!_needForceRefresh && releaseId && *releaseId == _releaseId)
+        if (releaseId && *releaseId == _releaseId)
             return;
 
         clear();
         _releaseId = {};
-        _needForceRefresh = false;
 
         if (!releaseId)
             throw ReleaseNotFoundException{};
@@ -360,8 +353,12 @@ namespace lms::ui
                 _playQueueController.processCommand(PlayQueueController::Command::PlayOrAddLast, { _releaseId });
             });
 
-        bindNew<Wt::WPushButton>("download", Wt::WString::tr("Lms.Explore.download"))
-            ->setLink(Wt::WLink{ std::make_unique<DownloadReleaseResource>(_releaseId) });
+        if (LmsApp->areDownloadsEnabled())
+        {
+            setCondition("if-has-download", true);
+            bindNew<Wt::WPushButton>("download", Wt::WString::tr("Lms.Explore.download"))
+                ->setLink(Wt::WLink{ std::make_unique<DownloadReleaseResource>(_releaseId) });
+        }
 
         bindNew<Wt::WPushButton>("release-info", Wt::WString::tr("Lms.Explore.release-info"))
             ->clicked()
@@ -448,7 +445,6 @@ namespace lms::ui
         db::Track::FindParameters params;
         params.setMedium(medium->getId());
         params.setSortMethod(db::TrackSortMethod::TrackNumber);
-        params.setFilters(_filters.getDbFilters()); // TODO: do we really want to hide all tracks when a release does not match the current label filter?
 
         db::Track::find(LmsApp->getDbSession(), params, [&](const db::Track::pointer& track) {
             const db::TrackId trackId{ track->getId() };
@@ -528,8 +524,12 @@ namespace lms::ui
                     starBtn->clicked().connect([=] { toggle(); });
                 }
 
-                entry->bindNew<Wt::WPushButton>("download", Wt::WString::tr("Lms.Explore.download"))
-                    ->setLink(Wt::WLink{ std::make_unique<DownloadTrackResource>(trackId) });
+                if (LmsApp->areDownloadsEnabled())
+                {
+                    entry->setCondition("if-has-download", true);
+                    entry->bindNew<Wt::WPushButton>("download", Wt::WString::tr("Lms.Explore.download"))
+                        ->setLink(Wt::WLink{ std::make_unique<DownloadTrackResource>(trackId) });
+                }
 
                 entry->bindNew<Wt::WPushButton>("track-info", Wt::WString::tr("Lms.Explore.track-info"))
                     ->clicked()

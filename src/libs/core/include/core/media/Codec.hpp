@@ -19,38 +19,20 @@
 
 #pragma once
 
-#include <chrono>
-#include <optional>
+#include <functional>
 
 #include "core/LiteralString.hpp"
 
-namespace lms::audio
+namespace lms::core::media
 {
-    enum class ContainerType
-    {
-        AIFF,
-        APE, // Monkey's Audio
-        ASF, // Advanced Systems Format
-        DSF,
-        FLAC,
-        MP4,
-        MPC, // Musepack
-        MPEG,
-        Ogg,
-        Shorten,
-        TrueAudio,
-        WAV,
-        WavPack,
-    };
-
-    core::LiteralString containerTypeToString(ContainerType type);
-
-    enum class CodecType
+    enum class Codec
     {
         AAC,
+        AC3,
         ALAC, // Apple Lossless Audio Codec (ALAC)
         APE,  // Monkey's Audio
         DSD,  // DSD
+        EAC3,
         FLAC, // Flac
         MP3,
         MP4ALS, // MPEG-4 Audio Lossless Coding
@@ -68,16 +50,13 @@ namespace lms::audio
         WMA9Lossless,
     };
 
-    core::LiteralString codecTypeToString(CodecType type);
-
-    struct AudioProperties
+    struct CodecDesc
     {
-        ContainerType container;
-        CodecType codec;
-        std::chrono::milliseconds duration;
-        unsigned bitrate;
-        unsigned channelCount;
-        unsigned sampleRate;
-        std::optional<unsigned> bitsPerSample;
+        Codec type;
+        core::LiteralString name;
+        core::LiteralString longName;
+        bool isLossless;
     };
-} // namespace lms::audio
+    void visitCodecs(const std::function<void(const CodecDesc&)>& visitor);
+    const CodecDesc& getCodecDesc(Codec type);
+} // namespace lms::core::media

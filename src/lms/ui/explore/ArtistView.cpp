@@ -80,11 +80,6 @@ namespace lms::ui
             refreshView();
         });
 
-        filters.updated().connect([this] {
-            _needForceRefresh = true;
-            refreshView();
-        });
-
         refreshView();
     }
 
@@ -96,13 +91,12 @@ namespace lms::ui
         const auto artistId{ extractArtistIdFromInternalPath() };
 
         // consider everything is up to date is the same artist is being rendered
-        if (!_needForceRefresh && artistId && *artistId == _artistId)
+        if (artistId && *artistId == _artistId)
             return;
 
         clear();
         _artistId = {};
         _trackContainer = nullptr;
-        _needForceRefresh = false;
 
         if (!artistId)
             throw ArtistNotFoundException{};
@@ -168,8 +162,13 @@ namespace lms::ui
             .connect([this] {
                 _playQueueController.processCommand(PlayQueueController::Command::PlayOrAddLast, { _artistId });
             });
-        bindNew<Wt::WPushButton>("download", Wt::WString::tr("Lms.Explore.download"))
-            ->setLink(Wt::WLink{ std::make_unique<DownloadArtistResource>(_artistId) });
+
+        if (LmsApp->areDownloadsEnabled())
+        {
+            setCondition("if-has-download", true);
+            bindNew<Wt::WPushButton>("download", Wt::WString::tr("Lms.Explore.download"))
+                ->setLink(Wt::WLink{ std::make_unique<DownloadArtistResource>(_artistId) });
+        }
 
         {
             auto isStarred{ [this] { return core::Service<feedback::IFeedbackService>::get()->isStarred(LmsApp->getUserId(), _artistId); } };
@@ -231,7 +230,6 @@ namespace lms::ui
         _releaseContainers.clear();
 
         db::Release::FindParameters params;
-        params.setFilters(_filters.getDbFilters());
         params.setArtist(_artistId, { db::TrackArtistLinkType::ReleaseArtist }, {});
         params.setSortMethod(LmsApp->getUser()->getUIArtistReleaseSortMethod());
 

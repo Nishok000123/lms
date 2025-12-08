@@ -21,9 +21,9 @@
 
 #include <vector>
 
-#include "audio/AudioTypes.hpp"
-#include "audio/IAudioFileInfo.hpp"
-#include "audio/IImageReader.hpp"
+#include "core/media/ImageType.hpp"
+
+#include "audio/AudioProperties.hpp"
 #include "image/Types.hpp"
 
 #include "scanners/FileScanOperationBase.hpp"
@@ -39,12 +39,13 @@ namespace lms::db
 
 namespace lms::scanner
 {
+    struct AudioFileInfoParserSet;
     class TrackMetadataParser;
 
     struct ImageInfo
     {
         std::size_t index;
-        audio::Image::Type type{ audio::Image::Type::Unknown };
+        core::media::ImageType type{ core::media::ImageType::Unknown };
         std::uint64_t hash{};
         std::size_t size{};
         image::ImageProperties properties;
@@ -55,7 +56,7 @@ namespace lms::scanner
     class AudioFileScanOperation : public FileScanOperationBase
     {
     public:
-        AudioFileScanOperation(FileToScan&& fileToScan, db::IDb& db, const ScannerSettings& settings, const TrackMetadataParser& metadataParser, const audio::ParserOptions& parserOptions);
+        AudioFileScanOperation(FileToScan&& fileToScan, db::IDb& db, const ScannerSettings& settings, const AudioFileInfoParserSet& audioFileInfoParserSet, const TrackMetadataParser& metadataParser);
         ~AudioFileScanOperation() override;
         AudioFileScanOperation(const AudioFileScanOperation&) = delete;
         AudioFileScanOperation& operator=(const AudioFileScanOperation&) = delete;
@@ -65,8 +66,8 @@ namespace lms::scanner
         void scan() override;
         OperationResult processResult() override;
 
+        const AudioFileInfoParserSet& _audioFileInfoParserSet;
         const TrackMetadataParser& _metadataParser;
-        const audio::ParserOptions& _parserOptions;
 
         struct AudioFileInfo
         {

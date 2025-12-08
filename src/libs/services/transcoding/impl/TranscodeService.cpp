@@ -19,11 +19,7 @@
 
 #include "TranscodeService.hpp"
 
-#include "audio/ITranscoder.hpp"
 #include "core/ILogger.hpp"
-#include "core/UUID.hpp"
-#include "database/IDb.hpp"
-#include "database/Session.hpp"
 
 #include "TranscodeResourceHandler.hpp"
 
@@ -38,14 +34,12 @@ namespace lms::transcoding
         }
     } // namespace
 
-    std::unique_ptr<ITranscodeService> createTranscodeService(db::IDb& db, core::IChildProcessManager& childProcessManager)
+    std::unique_ptr<ITranscodeService> createTranscodeService()
     {
-        return std::make_unique<TranscodeService>(db, childProcessManager);
+        return std::make_unique<TranscodeService>();
     }
 
-    TranscodeService::TranscodeService(db::IDb& db, core::IChildProcessManager& childProcessManager)
-        : _db{ db }
-        , _childProcessManager(childProcessManager)
+    TranscodeService::TranscodeService()
     {
         LMS_LOG(TRANSCODING, INFO, "Service started!");
     }
@@ -61,10 +55,10 @@ namespace lms::transcoding
 
         if (estimateContentLength)
         {
-            if (parameters.inputParameters.offset < parameters.inputParameters.duration)
-                estimatedContentLength = doEstimateContentLength(*parameters.outputParameters.bitrate, parameters.inputParameters.duration - parameters.inputParameters.offset);
+            if (parameters.inputParameters.offset < parameters.inputParameters.audioProperties.duration)
+                estimatedContentLength = doEstimateContentLength(*parameters.outputParameters.bitrate, parameters.inputParameters.audioProperties.duration - parameters.inputParameters.offset);
             else
-                LMS_LOG(TRANSCODING, WARNING, "Offset " << parameters.inputParameters.offset << " is greater than audio file duration " << parameters.inputParameters.duration << ": not estimating content length");
+                LMS_LOG(TRANSCODING, WARNING, "Offset " << parameters.inputParameters.offset << " is greater than audio file duration " << parameters.inputParameters.audioProperties.duration << ": not estimating content length");
         }
 
         return std::make_unique<transcoding::ResourceHandler>(parameters, estimatedContentLength);

@@ -23,6 +23,7 @@
 #include <Wt/Dbo/WtSqlTraits.h>
 
 #include "core/ILogger.hpp"
+
 #include "database/Session.hpp"
 #include "database/Types.hpp"
 #include "database/objects/Artist.hpp"
@@ -41,6 +42,7 @@
 
 #include "SqlQuery.hpp"
 #include "Utils.hpp"
+#include "objects/detail/Types.hpp"
 #include "traits/IdTypeTraits.hpp"
 #include "traits/PartialDateTimeTraits.hpp"
 #include "traits/PathTraits.hpp"
@@ -194,6 +196,9 @@ namespace lms::db
                 query.join("track_embedded_image_link t_e_i_l ON t_e_i_l.track_id = t.id");
                 query.where("t_e_i_l.track_embedded_image_id = ?").bind(params.embeddedImageId);
             }
+
+            if (params.filters.codec.has_value())
+                query.where("t.codec = ?").bind(detail::getDbCodec(*params.filters.codec));
 
             switch (params.sortMethod)
             {
@@ -523,6 +528,16 @@ namespace lms::db
         _absoluteFilePath = filePath;
     }
 
+    void Track::setContainer(core::media::Container container)
+    {
+        _container = detail::getDbContainer(container);
+    }
+
+    void Track::setCodec(core::media::Codec codec)
+    {
+        _codec = detail::getDbCodec(codec);
+    }
+
     void Track::setName(std::string_view name)
     {
         _name = std::string{ name, 0, _maxNameLength };
@@ -601,6 +616,16 @@ namespace lms::db
     void Track::setPreferredMediaArtwork(ObjectPtr<Artwork> artwork)
     {
         _preferredMediaArtwork = getDboPtr(artwork);
+    }
+
+    std::optional<core::media::Container> Track::getContainer() const
+    {
+        return detail::getMediaContainerType(_container);
+    }
+
+    std::optional<core::media::Codec> Track::getCodec() const
+    {
+        return detail::getMediaCodecType(_codec);
     }
 
     std::optional<int> Track::getYear() const

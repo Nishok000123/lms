@@ -40,17 +40,16 @@ namespace lms::audio::ffmpeg
             return std::any_of(std::cbegin(metadata), std::cend(metadata), [&](const auto& keyValue) { return core::stringUtils::stringCaseInsensitiveContains(keyValue.second, keyword); });
         } };
 
-        _audioFile.visitAttachedPictures([&](const Picture& picture, const AudioFile::MetadataMap& metaData) {
+        _audioFile.visitAttachedPictures([&](const PictureView& picture, const AudioFile::MetadataMap& metaData) {
             Image image;
             image.data = picture.data;
             image.mimeType = picture.mimeType;
             if (metaDataHasKeyword(metaData, "front"))
-                image.type = Image::Type::FrontCover;
+                image.type = core::media::ImageType::FrontCover;
             else if (metaDataHasKeyword(metaData, "back"))
-                image.type = Image::Type::BackCover;
+                image.type = core::media::ImageType::BackCover;
 
             visitor(image);
         });
     }
-
 } // namespace lms::audio::ffmpeg

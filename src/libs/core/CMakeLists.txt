@@ -13,6 +13,10 @@ configure_file(
 add_library(lmscore STATIC
 	impl/http/Client.cpp
 	impl/http/SendQueue.cpp
+	impl/media/Codec.cpp
+	impl/media/Container.cpp
+	impl/media/ImageType.cpp
+	impl/media/MimeType.cpp
 	impl/ArchiveZipper.cpp
 	impl/ChildProcess.cpp
 	impl/ChildProcessManager.cpp

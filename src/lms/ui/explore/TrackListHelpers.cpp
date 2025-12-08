@@ -25,8 +25,6 @@
 
 #include "core/Service.hpp"
 
-#include "audio/AudioTypes.hpp"
-#include "audio/IAudioFileInfo.hpp"
 #include "database/Session.hpp"
 #include "database/Types.hpp"
 #include "database/objects/Artist.hpp"
@@ -129,16 +127,10 @@ namespace lms::ui::TrackListHelpers
             }
         }
 
-        try
+        if (const auto codec{ track->getCodec() })
         {
-            if (const auto audioFile{ audio::parseAudioFile(track->getAbsoluteFilePath()) })
-            {
-                trackInfo->setCondition("if-has-codec", true);
-                trackInfo->bindString("codec", audio::codecTypeToString(audioFile->getAudioProperties().codec).c_str(), Wt::TextFormat::Plain);
-            }
-        }
-        catch (const audio::Exception& e)
-        {
+            trackInfo->setCondition("if-has-codec", true);
+            trackInfo->bindString("codec", core::media::getCodecDesc(*codec).name.c_str(), Wt::TextFormat::Plain);
         }
 
         trackInfo->bindString("duration", utils::durationToString(track->getDuration()));
@@ -307,8 +299,12 @@ namespace lms::ui::TrackListHelpers
             starBtn->clicked().connect([=] { toggle(); });
         }
 
-        entry->bindNew<Wt::WPushButton>("download", Wt::WString::tr("Lms.Explore.download"))
-            ->setLink(Wt::WLink{ std::make_unique<DownloadTrackResource>(trackId) });
+        if (LmsApp->areDownloadsEnabled())
+        {
+            entry->setCondition("if-has-download", true);
+            entry->bindNew<Wt::WPushButton>("download", Wt::WString::tr("Lms.Explore.download"))
+                ->setLink(Wt::WLink{ std::make_unique<DownloadTrackResource>(trackId) });
+        }
 
         entry->bindNew<Wt::WPushButton>("track-info", Wt::WString::tr("Lms.Explore.track-info"))
             ->clicked()

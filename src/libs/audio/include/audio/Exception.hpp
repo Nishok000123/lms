@@ -19,6 +19,9 @@
 
 #pragma once
 
+#include <filesystem>
+#include <system_error>
+
 #include "core/Exception.hpp"
 
 namespace lms::audio
@@ -28,4 +31,23 @@ namespace lms::audio
     public:
         using LmsException::LmsException;
     };
+
+    class IOFileException : public Exception
+    {
+    public:
+        IOFileException(const std::filesystem::path& path, std::string_view message, std::error_code err)
+            : Exception{ "File '" + path.string() + "': " + std::string{ message } + ": " + err.message() }
+            , _path{ path }
+            , _err{ err }
+        {
+        }
+
+        const std::filesystem::path& getPath() const { return _path; }
+        std::error_code getErrorCode() const { return _err; }
+
+    private:
+        std::filesystem::path _path;
+        std::error_code _err;
+    };
+
 } // namespace lms::audio
