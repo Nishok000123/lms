@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Emeric Poupon
+ * Copyright (C) 2024 Emeric Poupon
  *
  * This file is part of LMS.
  *
@@ -19,34 +19,34 @@
 
 #pragma once
 
-#include <map>
-#include <memory>
-#include <set>
+#include <variant>
 
-#include <Wt/WString.h>
-#include <Wt/WWidget.h>
+#include "core/String.hpp"
 
-#include "core/EnumSet.hpp"
-
-#include "database/Object.hpp"
-#include "database/objects/ArtistId.hpp"
-#include "database/objects/TrackId.hpp"
 #include "database/objects/Types.hpp"
-
-namespace lms::db
-{
-    class Track;
-}
 
 namespace lms::ui
 {
-    class PlayQueueController;
-    class Filters;
+    struct AllArtistsTag
+    {
+        bool operator==(const AllArtistsTag&) const = default;
+    };
+    struct ReleaseArtistsTag
+    {
+        bool operator==(const ReleaseArtistsTag&) const = default;
+    };
+
+    using ArtistType = std::variant<AllArtistsTag, ReleaseArtistsTag, db::TrackArtistLinkType>;
+
 } // namespace lms::ui
 
-namespace lms::ui::TrackListHelpers
+namespace lms::core::stringUtils
 {
-    void showTrackInfoModal(db::TrackId trackId, Filters& filters);
-    void showTrackLyricsModal(db::TrackId trackId);
-    std::unique_ptr<Wt::WWidget> createEntry(const db::ObjectPtr<db::Track>& track, PlayQueueController& playQueueController, Filters& filters);
-} // namespace lms::ui::TrackListHelpers
+    template<>
+    [[nodiscard]] std::optional<lms::ui::ArtistType> readAs(std::string_view str);
+}
+
+namespace std
+{
+    [[nodiscard]] std::string to_string(const lms::ui::ArtistType& artistType);
+};
