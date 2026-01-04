@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Emeric Poupon
+ * Copyright (C) 2024 Emeric Poupon
  *
  * This file is part of LMS.
  *
@@ -19,27 +19,34 @@
 
 #pragma once
 
-#include <algorithm>
-#include <functional>
+#include <variant>
 
-namespace lms::core::utils
+#include "core/String.hpp"
+
+#include "database/objects/Types.hpp"
+
+namespace lms::ui
 {
-    template<typename Container, typename T>
-    void push_back_if_not_present(Container& container, const T& val)
+    struct AllArtistsTag
     {
-        if (std::find(std::cbegin(container), std::cend(container), val) == std::cend(container))
-            container.push_back(val);
-    }
-
-    template<class... Ts>
-    struct overloads : Ts...
+        bool operator==(const AllArtistsTag&) const = default;
+    };
+    struct ReleaseArtistsTag
     {
-        using Ts::operator()...;
+        bool operator==(const ReleaseArtistsTag&) const = default;
     };
 
-    template<class... Ts>
-    overloads(Ts...) -> overloads<Ts...>;
+    using ArtistType = std::variant<AllArtistsTag, ReleaseArtistsTag, db::TrackArtistLinkType>;
 
-    template<typename>
-    constexpr bool dependent_false_v{};
-} // namespace lms::core::utils
+} // namespace lms::ui
+
+namespace lms::core::stringUtils
+{
+    template<>
+    [[nodiscard]] std::optional<lms::ui::ArtistType> readAs(std::string_view str);
+}
+
+namespace std
+{
+    [[nodiscard]] std::string to_string(const lms::ui::ArtistType& artistType);
+};

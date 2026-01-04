@@ -9,12 +9,14 @@
 <message id="Lms.clusters">Tags</message>
 <message id="Lms.create">Créer</message>
 <message id="Lms.delete">Supprimer</message>
+<message id="Lms.delete-item">Supprimer {1}</message>
 <message id="Lms.discard">Annuler</message>
 <message id="Lms.edit">Editer</message>
 <message id="Lms.field-must-be-in-upper-case">Ce champ doit être en majuscule</message>
 <message id="Lms.loading">Chargement...</message>
 <message id="Lms.login">Login</message>
 <message id="Lms.logout"><i class="fa fa-fw fa-sign-out" aria-hidden="true"></i> Quitter</message>
+<message id="Lms.more">Plus...</message>
 <message id="Lms.ok">Ok</message>
 <message id="Lms.password">Mot de passe</message>
 <message id="Lms.password-bad-login-combination">Mauvaise combinaison login / mot de passe</message>
@@ -25,6 +27,7 @@
 <message id="Lms.password-old">Ancien mot de passe</message>
 <message id="Lms.password-too-weak">Mot de passe trop faible</message>
 <message id="Lms.passwords-dont-match">Les mots de passe ne correspondent pas</message>
+<message id="Lms.play-item">Lire {1}</message>
 <message id="Lms.quit-other-session">Une autre session a été ouverte. Reouvrir celle-ci ?</message>
 <message id="Lms.save">Sauvegarder</message>
 <message id="Lms.settings-saved">Paramètres sauvegardés!</message>
@@ -145,7 +148,6 @@
 <message id="Lms.Admin.ScannerController.step-checking-for-removed-files">Vérification des fichiers supprimés... {1}%</message>
 <message id="Lms.Admin.ScannerController.step-compact">Compactage de la base de données...</message>
 <message id="Lms.Admin.ScannerController.step-compute-cluster-stats">Calcul des statistiques... {1}%</message>
-<message id="Lms.Admin.ScannerController.step-fetching-track-features">Récupération des métadonnées AcousticBrainz : {1}/{2} fichiers ({3}%)...</message>
 <message id="Lms.Admin.ScannerController.step-optimize">Optimisation de la base de données... {1}%...</message>
 <message id="Lms.Admin.ScannerController.step-reconciliate-artists">Reconciliation des artistes: {1} entrées...</message>
 <message id="Lms.Admin.ScannerController.step-reloading-similarity-engine">Rechargement du moteur de recommandation : {1}%...</message>
@@ -197,6 +199,7 @@
 <message id="Lms.Explore.artists">Artistes</message>
 <message id="Lms.Explore.bitrate">Bitrate</message>
 <message id="Lms.Explore.codec">Codec</message>
+<message id="Lms.Explore.cover-art">Pochette</message>
 <message id="Lms.Explore.download">Télécharger</message>
 <message id="Lms.Explore.duration">Durée</message>
 <message id="Lms.Explore.filter-added">Filtre ajouté</message>
@@ -220,6 +223,7 @@
 <message id="Lms.Explore.releases">Albums</message>
 <message id="Lms.Explore.search">Rechercher</message>
 <message id="Lms.Explore.star">Ajouter aux favoris</message>
+<message id="Lms.Explore.star-item">Ajouter {1} aux favoris</message>
 <message id="Lms.Explore.starred">Favoris</message>
 <message id="Lms.Explore.track-info">Informations sur la piste</message>
 <message id="Lms.Explore.track-lyrics">Paroles</message>
@@ -236,42 +240,42 @@
 <message id="Lms.Explore.Artist.similar-artists">Artistes similaires</message>
 
 <!--Explore:Artists-->
-<message id="Lms.Explore.Artists.linktype-all">Tous les artistes</message>
-<message id="Lms.Explore.Artists.linktype-artist">
-	<plural case="0">Artiste de piste</plural>
-	<plural case="1">Artistes de piste</plural>
-</message>
-<message id="Lms.Explore.Artists.linktype-composer">
+<message id="Lms.Explore.Artists.all">Tous les artistes</message>
+<message id="Lms.Explore.Artists.composer">
 	<plural case="0">Compositeur</plural>
 	<plural case="1">Compositeurs</plural>
 </message>
-<message id="Lms.Explore.Artists.linktype-conductor">
+<message id="Lms.Explore.Artists.conductor">
 	<plural case="0">Chef d'orchestre</plural>
 	<plural case="1">Chefs d'orchestre</plural>
 </message>
-<message id="Lms.Explore.Artists.linktype-lyricist">
+<message id="Lms.Explore.Artists.lyricist">
 	<plural case="0">Parolier</plural>
 	<plural case="1">Paroliers</plural>
 </message>
-<message id="Lms.Explore.Artists.linktype-mixer">
+<message id="Lms.Explore.Artists.mixer">
 	<plural case="0">Mixeur</plural>
 	<plural case="1">Mixeurs</plural>
 </message>
-<message id="Lms.Explore.Artists.linktype-performer">
+<message id="Lms.Explore.Artists.performer">
 	<plural case="0">Interprète</plural>
 	<plural case="1">Interprètes</plural>
 </message>
-<message id="Lms.Explore.Artists.linktype-producer">
+<message id="Lms.Explore.Artists.producer">
 	<plural case="0">Producteur</plural>
 	<plural case="1">Producteurs</plural>
 </message>
-<message id="Lms.Explore.Artists.linktype-releaseartist">
+<message id="Lms.Explore.Artists.release-artist">
 	<plural case="0">Artiste d'album</plural>
 	<plural case="1">Artistes d'album</plural>
 </message>
-<message id="Lms.Explore.Artists.linktype-remixer">
+<message id="Lms.Explore.Artists.remixer">
 	<plural case="0">Remixeur</plural>
 	<plural case="1">Remixeurs</plural>
+</message>
+<message id="Lms.Explore.Artists.track-artist">
+	<plural case="0">Artiste de piste</plural>
+	<plural case="1">Artistes de piste</plural>
 </message>
 
 <!--Explore:Release-->
@@ -308,6 +312,12 @@
 
 <!--Player-->
 <message id="Lms.Player.transcoding-active">Transcodage actif</message>
+<message id="Lms.Player.now-playing">En cours de lecture</message>
+<message id="Lms.Player.previous">Précédent</message>
+<message id="Lms.Player.play-pause">Lecture / pause</message>
+<message id="Lms.Player.next">Suivant</message>
+<message id="Lms.Player.seek">Navigation</message>
+<message id="Lms.Player.volume">Volume</message>
 
 <!--Playqueue-->
 <message id="Lms.PlayQueue.clear">Effacer</message>
