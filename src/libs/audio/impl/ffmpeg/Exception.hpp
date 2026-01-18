@@ -1,3 +1,4 @@
+
 /*
  * Copyright (C) 2025 Emeric Poupon
  *
@@ -17,14 +18,26 @@
  * along with LMS.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#pragma once
+#include <string_view>
 
-#include <filesystem>
-#include <span>
+#include "audio/Exception.hpp"
 
-namespace lms::audio::ffmpeg::utils
+#include "Utils.hpp"
+
+namespace lms::audio::ffmpeg
 {
-    std::string averrorToString(int error);
+    class FFmpegException : public Exception
+    {
+    public:
+        FFmpegException(std::string_view msg, int avError)
+            : Exception{ std::string{ msg } + ": " + utils::averrorToString(avError) }
+            , _avError{ avError }
+        {
+        }
 
-    std::span<const std::filesystem::path> getSupportedExtensions();
-} // namespace lms::audio::ffmpeg::utils
+        int getAvError() const { return _avError; }
+
+    private:
+        int _avError;
+    };
+} // namespace lms::audio::ffmpeg
