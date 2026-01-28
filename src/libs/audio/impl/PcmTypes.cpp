@@ -17,28 +17,25 @@
  * along with LMS.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#pragma once
-
-#include <bit>
+#include "audio/PcmTypes.hpp"
+#include "audio/Exception.hpp"
 
 namespace lms::audio
 {
-    enum class PcmSampleType
+    std::size_t getSampleSize(PcmSampleType type)
     {
-        Signed16,
-        Signed32,
-        Float32,
-        Float64,
-    };
+        switch (type)
+        {
+        case PcmSampleType::Signed16:
+            return 2;
+        case PcmSampleType::Signed32:
+        case PcmSampleType::Float32:
+            return 4;
+        case PcmSampleType::Float64:
+            return 8;
+        };
 
-    std::size_t getSampleSize(PcmSampleType type);
+        throw Exception{ "Unhandled sample type" };
+    }
 
-    struct PcmParameters
-    {
-        unsigned channelCount;
-        unsigned sampleRate;
-        PcmSampleType sampleType;
-        std::endian byteOrder;
-        bool planar;
-    };
 } // namespace lms::audio
