@@ -19,38 +19,28 @@
 
 #pragma once
 
-#include <deque>
-#include <list>
-#include <vector>
-
 #include "audio/IAudioOutput.hpp"
 
-extern "C"
-{
-    struct pa_context;
-    struct pa_proplist;
-    struct pa_stream;
-    struct pa_threaded_mainloop;
-}
+#include <deque>
+#include <thread>
+#include <vector>
 
-namespace lms::audio::pulseaudio
-{
-    struct PaPropListDeleter
-    {
-        void operator()(pa_proplist* proplist) const noexcept;
-    };
-    using PaPropListPtr = std::unique_ptr<pa_proplist, PaPropListDeleter>;
+#include <alsa/asoundlib.h>
+#include <boost/asio/posix/stream_descriptor.hpp>
+#include <boost/asio/strand.hpp>
 
-    struct PaStreamDeleter
+namespace lms::audio::alsa
+{
+    struct SndPcmDeleter
     {
-        void operator()(pa_stream* stream) const noexcept;
+        void operator()(snd_pcm_t* ctx) const noexcept;
     };
-    using PaStreamPtr = std::unique_ptr<pa_stream, PaStreamDeleter>;
+    using SndPcmPtr = std::unique_ptr<snd_pcm_t, SndPcmDeleter>;
 
     class AudioOutputStream : public IAudioOutputStream
     {
     public:
-        AudioOutputStream(boost::asio::io_context& ioContext, pa_context* context, pa_threaded_mainloop* mainLoop, std::string_view name, const PcmParameters& outputParameters);
+        AudioOutputStream(boost::asio::io_context& ioContext, std::string_view device, std::string_view name, const PcmParameters& outputParameters);
         ~AudioOutputStream() override;
 
         AudioOutputStream(AudioOutputStream&) = delete;
@@ -68,41 +58,35 @@ namespace lms::audio::pulseaudio
 
         std::chrono::microseconds getPlaybackTime() const override;
 
-        void connect();
-        void onStateChanged();
-        void onWriteRequested(std::size_t writableSize);
-        void writeSome(std::size_t writableSize);
-        void drain();
-        void onDrainComplete(bool success);
+        void stop();
+        void setupAllDescriptors();
+        void releaseAllDescriptors();
+        void asyncWaitAllDescriptors();
+        void cancelAllDescriptors();
+        void asyncWaitDescriptor(boost::asio::posix::stream_descriptor& streamDescriptor, boost::asio::posix::stream_descriptor::wait_type waitType);
+        void handleFdEvent();
+        void writeSomeFrames();
+        void onDrainComplete();
 
         boost::asio::io_context& _ioContext;
-        pa_context* _context;
-        pa_threaded_mainloop* _mainLoop;
+        const std::string _name;
         const PcmParameters _outputParameters;
-        PaStreamPtr _stream;
+        boost::asio::io_context::strand _strand;
+        SndPcmPtr _pcm;
 
-        WaitReadyCallback _waitReadyCallback;
+        std::vector<::pollfd> _fileDescriptors;
+        std::vector<boost::asio::posix::stream_descriptor> _streamDescriptors;
 
-        using WriteOperationId = std::size_t;
         struct WriteOperation
         {
-            WriteOperationId id{};
-            AudioOutputStream* stream{};
             std::span<const std::byte> buffer;
             WriteCompletionCallback callback;
         };
-        WriteOperationId _nextWriteOperationId{};
-        std::list<WriteOperation> _operations; // we want obj addresses to be stable
-        std::vector<WriteOperation*> _freeOperations;
-        std::deque<WriteOperation*> _pendingWriteOperations;
-        std::size_t _ongoingWriteOperationCount{};
-
-        WriteOperation* acquireWriteOperation();
-        void onWriteOperationComplete(WriteOperation* operation);
-        void onPartialWriteOperationComplete(WriteOperation* operation);
+        std::deque<WriteOperation> _operations;
+        std::size_t _totalWrittenFrameCount{};
 
         bool _drainRequested{};
-        bool _drainDone{};
         DrainCompletionCallback _drainCallback;
+        std::thread _drainThread;
     };
-} // namespace lms::audio::pulseaudio
+} // namespace lms::audio::alsa

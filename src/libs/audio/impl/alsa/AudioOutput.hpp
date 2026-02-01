@@ -21,26 +21,8 @@
 
 #include "audio/IAudioOutput.hpp"
 
-extern "C"
+namespace lms::audio::alsa
 {
-    struct pa_context;
-    struct pa_threaded_mainloop;
-}
-
-namespace lms::audio::pulseaudio
-{
-    struct PaContextDeleter
-    {
-        void operator()(pa_context* ctx) const noexcept;
-    };
-    using PaContextPtr = std::unique_ptr<pa_context, PaContextDeleter>;
-
-    struct PaThreadedMainLoopDeleter
-    {
-        void operator()(pa_threaded_mainloop* mainloop) const noexcept;
-    };
-    using PaThreadedMainLoopPtr = std::unique_ptr<pa_threaded_mainloop, PaThreadedMainLoopDeleter>;
-
     class AudioOutputContext : public IAudioOutputContext
     {
     public:
@@ -54,11 +36,8 @@ namespace lms::audio::pulseaudio
         void asyncWaitReady(WaitReadyCallback cb) override;
         std::unique_ptr<IAudioOutputStream> createOutputStream(std::string_view name, const PcmParameters& outputParameters) override;
 
-        void onStateChanged();
-
         boost::asio::io_context& _ioContext;
-        std::vector<WaitReadyCallback> _waitReadyCallbacks;
-        PaThreadedMainLoopPtr _mainLoop;
-        PaContextPtr _context;
+        const std::string _name;
+        const std::string _device;
     };
-} // namespace lms::audio::pulseaudio
+} // namespace lms::audio::alsa
