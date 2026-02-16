@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Emeric Poupon
+ * Copyright (C) 2026 Emeric Poupon
  *
  * This file is part of LMS.
  *
@@ -19,14 +19,10 @@
 
 #pragma once
 
-#include <filesystem>
-#include <span>
+#include "RequestContext.hpp"
+#include "SubsonicResponse.hpp"
 
-namespace lms::audio::ffmpeg::utils
+namespace lms::api::subsonic
 {
-    std::string averrorToString(int error);
-
-    std::span<const std::filesystem::path> getSupportedExtensions();
-
-    void init();
-} // namespace lms::audio::ffmpeg::utils
+    Response handleJukeboxControl(RequestContext& context);
+} // namespace lms::api::subsonic
