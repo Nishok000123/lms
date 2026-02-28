@@ -288,7 +288,7 @@ namespace lms::ui::utils
 
             if (trackArtists.size() > 1)
                 res.displayName = Wt::WString::tr("Lms.Explore.various-artists").toUTF8();
-            else
+            else if (trackArtists.size() == 1)
                 res.entries.emplace_back(ArtistDisplayInfo::Entry{ .displayName = std::string{ trackArtists[0]->getName() }, .artist = trackArtists[0] });
         }
 
@@ -473,5 +473,32 @@ namespace lms::ui::utils
         }
 
         return artistMap;
+    }
+
+    std::unique_ptr<Wt::WInteractWidget> createCopyright(std::string_view copyright, std::string_view copyrightURL)
+    {
+        std::unique_ptr<Wt::WInteractWidget> res;
+
+        if (copyright.empty() && copyrightURL.empty())
+            return res;
+
+        if (copyright.empty() && !copyrightURL.empty())
+            copyright = copyrightURL;
+
+        if (!copyrightURL.empty())
+        {
+            Wt::WLink link{ std::string{ copyrightURL } };
+            link.setTarget(Wt::LinkTarget::NewWindow);
+
+            auto anchor{ std::make_unique<Wt::WAnchor>(link) };
+            anchor->setTextFormat(Wt::TextFormat::Plain);
+            anchor->setText(Wt::WString::fromUTF8(std::string{ copyright }));
+
+            res = std::move(anchor);
+        }
+        else
+            res = std::make_unique<Wt::WText>(Wt::WString::fromUTF8(std::string{ copyright }), Wt::TextFormat::Plain);
+
+        return res;
     }
 } // namespace lms::ui::utils

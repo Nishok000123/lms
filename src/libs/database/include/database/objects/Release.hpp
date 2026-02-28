@@ -169,6 +169,7 @@ namespace lms::db
             std::optional<Range> range;
             Wt::WDateTime writtenAfter;
             std::optional<YearRange> dateRange;
+            std::optional<YearRange> originalDateRange;
             UserId starringUser;                                     // only releases starred by this user
             std::optional<FeedbackBackend> feedbackBackend;          //    and for this backend
             ArtistId artist;                                         // only releases by this release artist
@@ -212,6 +213,11 @@ namespace lms::db
             FindParameters& setDateRange(const std::optional<YearRange>& _dateRange)
             {
                 dateRange = _dateRange;
+                return *this;
+            }
+            FindParameters& setOriginalDateRange(const std::optional<YearRange>& _originalDateRange)
+            {
+                originalDateRange = _originalDateRange;
                 return *this;
             }
             FindParameters& setStarringUser(UserId _user, FeedbackBackend _feedbackBackend)
@@ -283,6 +289,7 @@ namespace lms::db
         std::optional<int> getYear() const;
         core::PartialDateTime getOriginalDate() const;
         std::optional<int> getOriginalYear() const;
+        bool hasVariousCopyrights() const;
         std::optional<std::string> getCopyright() const;
         std::optional<std::string> getCopyrightURL() const;
         std::size_t getMeanBitrate() const;
