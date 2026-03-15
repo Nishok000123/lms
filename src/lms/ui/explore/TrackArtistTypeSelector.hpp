@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Emeric Poupon
+ * Copyright (C) 2026 Emeric Poupon
  *
  * This file is part of LMS.
  *
@@ -19,19 +19,17 @@
 
 #pragma once
 
-#include "core/ILogger.hpp"
+#include "core/EnumSet.hpp"
 
-#include "database/objects/UserId.hpp"
+#include "database/objects/Types.hpp"
 
-#define LOG(sev, message) LMS_LOG(FEEDBACK, sev, "[listenbrainz] " << message)
+#include "DropDownMenuSelector.hpp"
 
-namespace lms::db
+namespace lms::ui
 {
-    class Session;
-}
-
-namespace lms::feedback::listenBrainz::utils
-{
-    std::string getListenBrainzToken(db::Session& session, db::UserId userId);
-    std::string parseValidateToken(std::string_view msgBody);
-} // namespace lms::feedback::listenBrainz::utils
+    class TrackArtistTypeSelector : public DropDownMenuSelector<std::optional<db::TrackArtistLinkType>>
+    {
+    public:
+        TrackArtistTypeSelector(std::optional<db::TrackArtistLinkType> defaultRole, core::EnumSet<db::TrackArtistLinkType> types);
+    };
+} // namespace lms::ui
