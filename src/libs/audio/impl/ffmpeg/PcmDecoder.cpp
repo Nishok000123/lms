@@ -318,8 +318,20 @@ namespace lms::audio::ffmpeg
         {
             if (_inputPacket->stream_index == _inputStreamIndex)
             {
-                const int sendError{ ::avcodec_send_packet(_decoderContext.get(), _inputPacket.get()) };
+                int sendError{ ::avcodec_send_packet(_decoderContext.get(), _inputPacket.get()) };
                 ::av_packet_unref(_inputPacket.get());
+                if (sendError == AVERROR_INVALIDDATA)
+                {
+                    // we may be close to the end of the file, abort gracefully *only* if next packet is EOF
+                    const int peekError{ ::av_read_frame(_context.get(), _inputPacket.get()) };
+                    ::av_packet_unref(_inputPacket.get());
+                    if (peekError == AVERROR_EOF)
+                    {
+                        LMS_LOG(AUDIO, DEBUG, "Invalid data in packet at end of file");
+                        _eof = true;
+                        sendError = 0;
+                    }
+                }
                 if (sendError < 0)
                     throw FFmpegException{ "avcodec_send_packet failed", sendError };
             }
