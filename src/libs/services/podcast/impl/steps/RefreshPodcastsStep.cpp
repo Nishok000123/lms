@@ -38,7 +38,6 @@ namespace lms::podcast
     {
         void removeArtwork(const db::Artwork::pointer& artwork)
         {
-            const auto underlyingImageId{ artwork->getUnderlyingId() };
             db::Image::pointer image{ artwork->getImage() };
             assert(image); // these artworks can only be an image
 
