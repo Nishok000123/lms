@@ -82,7 +82,10 @@ namespace lms::podcast
             {
                 LMS_LOG(PODCAST, INFO, "Podcast '" << podcast.title << "' : image url changed from '" << previousUrl << "' to '" << podcast.imageUrl << "'");
                 if (db::Artwork::pointer currentArtwork{ dbPodcast->getArtwork() })
+                {
                     removeArtwork(currentArtwork);
+                    dbPodcast.modify()->setArtwork({});
+                }
 
                 dbPodcast.modify()->setImageUrl(podcast.imageUrl);
             }
