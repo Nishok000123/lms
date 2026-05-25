@@ -397,8 +397,8 @@
 	<plural case="1">{1} minutes</plural>
 </message>
 <message id="Wt.WDateTime.hours">
-	<plural case="0">une houre</plural>
-	<plural case="1">{1} houres</plural>
+	<plural case="0">une heure</plural>
+	<plural case="1">{1} heures</plural>
 </message>
 <message id="Wt.WDateTime.days">
 	<plural case="0">un jour</plural>
