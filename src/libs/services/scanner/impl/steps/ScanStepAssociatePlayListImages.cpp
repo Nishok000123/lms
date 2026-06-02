@@ -20,7 +20,9 @@
 #include "ScanStepAssociatePlayListImages.hpp"
 
 #include <deque>
+#include <span>
 
+#include "core/IJob.hpp"
 #include "core/ILogger.hpp"
 #include "database/IDb.hpp"
 #include "database/Session.hpp"
@@ -29,6 +31,7 @@
 #include "database/objects/Image.hpp"
 #include "database/objects/PlayListFile.hpp"
 
+#include "JobQueue.hpp"
 #include "ScanContext.hpp"
 
 namespace lms::scanner
@@ -86,6 +89,64 @@ namespace lms::scanner
             }
         }
 
+        bool fetchNextPlayListIdRange(db::Session& session, db::PlayListFileId& lastRetrievedId, db::IdRange<db::PlayListFileId>& idRange)
+        {
+            constexpr std::size_t readBatchSize{ 100 };
+
+            auto transaction{ session.createReadTransaction() };
+
+            idRange = db::PlayListFile::findNextIdRange(session, lastRetrievedId, readBatchSize);
+            lastRetrievedId = idRange.last;
+
+            return idRange.isValid();
+        }
+
+        class ComputePlayListArtworkAssociationsJob : public core::IJob
+        {
+        public:
+            ComputePlayListArtworkAssociationsJob(db::IDb& db, db::IdRange<db::PlayListFileId> idRange)
+                : _db{ db }
+                , _idRange{ idRange }
+            {
+            }
+            ~ComputePlayListArtworkAssociationsJob() override = default;
+            ComputePlayListArtworkAssociationsJob(const ComputePlayListArtworkAssociationsJob&) = delete;
+            ComputePlayListArtworkAssociationsJob& operator=(const ComputePlayListArtworkAssociationsJob&) = delete;
+
+            std::span<const PlayListArtworkAssociation> getAssociations() const { return _associations; }
+            std::size_t getProcessedCount() const { return _processedCount; }
+
+        private:
+            core::LiteralString getName() const override { return "Associate PlayList Artworks"; }
+            void run() override
+            {
+                auto& session{ _db.getTLSSession() };
+                auto transaction{ session.createReadTransaction() };
+
+                db::PlayListFile::find(session, _idRange, [this, &session](const db::PlayListFile::pointer& playListFile) {
+                    const db::Artwork::pointer preferredArtwork{ computePreferredArtwork(session, playListFile) };
+                    const db::ArtworkId newId{ preferredArtwork ? preferredArtwork->getId() : db::ArtworkId{} };
+
+                    if (newId != playListFile->getPreferredArtworkId())
+                    {
+                        _associations.push_back({ playListFile->getId(), newId });
+
+                        if (preferredArtwork)
+                            LMS_LOG(DBUPDATER, DEBUG, "Updating preferred artwork for playlist '" << playListFile->getName() << "' with image " << preferredArtwork->getAbsoluteFilePath());
+                        else
+                            LMS_LOG(DBUPDATER, DEBUG, "Removing preferred artwork from playlist '" << playListFile->getName() << "'");
+                    }
+
+                    _processedCount++;
+                });
+            }
+
+            db::IDb& _db;
+            db::IdRange<db::PlayListFileId> _idRange;
+            std::vector<PlayListArtworkAssociation> _associations;
+            std::size_t _processedCount{};
+        };
+
     } // namespace
 
     bool ScanStepAssociatePlayListImages::needProcess(const ScanContext& context) const
@@ -103,46 +164,31 @@ namespace lms::scanner
         }
 
         PlayListArtworkAssociationContainer associations;
+        auto processJobsDone = [&](std::span<std::unique_ptr<core::IJob>> jobs) {
+            if (_abortScan)
+                return;
 
-        db::PlayListFileId lastRetrievedId;
-        db::IdRange<db::PlayListFileId> idRange;
-
-        while (true)
-        {
+            for (const auto& job : jobs)
             {
-                auto transaction{ session.createReadTransaction() };
-                idRange = db::PlayListFile::findNextIdRange(session, lastRetrievedId, 100);
-                lastRetrievedId = idRange.last;
-            }
+                const auto& associationJob{ static_cast<const ComputePlayListArtworkAssociationsJob&>(*job) };
 
-            if (!idRange.isValid())
-                break;
+                const auto& jobAssociations{ associationJob.getAssociations() };
+                associations.insert(std::end(associations), std::cbegin(jobAssociations), std::cend(jobAssociations));
 
-            {
-                auto transaction{ session.createReadTransaction() };
-                db::PlayListFile::find(session, idRange, [&](const db::PlayListFile::pointer& playListFile) {
-                    const db::Artwork::pointer preferredArtwork{ computePreferredArtwork(session, playListFile) };
-                    const db::ArtworkId newId{ preferredArtwork ? preferredArtwork->getId() : db::ArtworkId{} };
-
-                    if (newId != playListFile->getPreferredArtworkId())
-                    {
-                        associations.push_back({ playListFile->getId(), newId });
-
-                        if (preferredArtwork)
-                            LMS_LOG(DBUPDATER, DEBUG, "Updating preferred artwork for playlist '" << playListFile->getName() << "' with image " << preferredArtwork->getAbsoluteFilePath());
-                        else
-                            LMS_LOG(DBUPDATER, DEBUG, "Removing preferred artwork from playlist '" << playListFile->getName() << "'");
-                    }
-
-                    context.currentStepStats.processedElems++;
-                });
+                context.currentStepStats.processedElems += associationJob.getProcessedCount();
             }
 
             updatePlayListPreferredArtworks(session, associations, true);
             _progressCallback(context.currentStepStats);
+        };
 
-            if (_abortScan)
-                return;
+        {
+            JobQueue queue{ getJobScheduler(), 20, processJobsDone, 1, 0.85F };
+
+            db::PlayListFileId lastRetrievedId{};
+            db::IdRange<db::PlayListFileId> idRange;
+            while (fetchNextPlayListIdRange(session, lastRetrievedId, idRange))
+                queue.push(std::make_unique<ComputePlayListArtworkAssociationsJob>(_db, idRange));
         }
 
         updatePlayListPreferredArtworks(session, associations, false);
