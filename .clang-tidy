@@ -7,6 +7,7 @@ Checks:          >
   cppcoreguidelines-*,
   -cppcoreguidelines-pro-bounds-constant-array-index,
   -cppcoreguidelines-avoid-magic-numbers,
+  -cppcoreguidelines-avoid-c-arrays,
 
   misc-*,
   -misc-include-cleaner,
