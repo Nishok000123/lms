@@ -40,7 +40,9 @@ _LMS_ provides several ways to help you find the music you like:
   * Starred _Jazz_ albums
   * ...
 
-__Note__: depending on your database size and/or your hardware, the tag-based recommendation engine may significantly slow down the user interface. You can disable it in the administration settings.
+__Note__: the recommendation engine supports two modes:
+* **Tag-based**: uses metadata tags `genre` and `grouping`.
+* **Audio similarity**: uses MusicNN embeddings. Extracting embeddings takes roughly 10× longer than regular file metadata parsing. To speed up extraction, consider tweaking `scanner-thread-count` in `lms.conf` (defaults to half the number of logical CPUs).
 
 ## About tags
 _LMS_ primarily relies on tags to organize your music collection but also supports browsing by directory using the [Subsonic/OpenSubsonic API](SUBSONIC.md).
