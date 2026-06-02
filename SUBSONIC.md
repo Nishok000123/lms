@@ -23,7 +23,7 @@ By default, API keys can also be used as passwords, provided the `user` paramete
 api-subsonic-support-user-password-auth = false;
 ```
 
-__Note__: the token+salt authentication method is not supported; you must use the API key as the password in subsonic clients that do not support API key authentication.
+__Note__: the token+salt authentication method is not supported; use the API key as the password instead (see above).
 
 ## Extra fields
 The following extra fields are implemented:
