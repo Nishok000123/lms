@@ -50,6 +50,7 @@
 
 #include "services/scanner/ScanErrors.hpp"
 
+#include "IgnoreRules.hpp"
 #include "ScannerSettings.hpp"
 #include "helpers/ArtistHelpers.hpp"
 #include "scanners/IFileScanOperation.hpp"
@@ -645,15 +646,17 @@ namespace lms::scanner
                     if (track && track->getId() == otherTrack->getId())
                         continue;
 
-                    // Skip if duplicate files no longer in media root: as it will be removed later, we will end up with no file
-                    auto& mediaLibraries{ getScannerSettings().mediaLibraries };
-                    if (std::none_of(std::cbegin(mediaLibraries), std::cend(mediaLibraries),
-                                     [&](const MediaLibraryInfo& libraryInfo) {
-                                         return core::pathUtils::isPathInRootPath(getFilePath(), libraryInfo.rootDirectory, &excludeDirFileName);
-                                     }))
-                    {
+                    // If the other file is no longer in an active library it will be removed later:
+                    // do not treat the current file as a duplicate, otherwise no file will remain for this MBID
+                    const std::filesystem::path otherFilePath{ otherTrack->getAbsoluteFilePath() };
+                    const auto isInActiveLibrary{ [&](const MediaLibraryInfo& libraryInfo) {
+                        if (!core::pathUtils::isPathInRootPath(otherFilePath, libraryInfo.rootDirectory))
+                            return false;
+                        return libraryInfo.ignoreRules.isEmpty() || !libraryInfo.ignoreRules.isIgnored(std::filesystem::relative(otherFilePath, libraryInfo.rootDirectory), IgnoreRules::IsDirectory{ false });
+                    } };
+                    const auto& mediaLibraries{ getScannerSettings().mediaLibraries };
+                    if (!std::any_of(std::cbegin(mediaLibraries), std::cend(mediaLibraries), isInActiveLibrary))
                         continue;
-                    }
 
                     LMS_LOG(DBUPDATER, DEBUG, "Skipped " << getFilePath() << ": same MBID already found in " << otherTrack->getAbsoluteFilePath());
                     // As this MBID already exists, just remove what we just scanned

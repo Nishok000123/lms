@@ -23,6 +23,8 @@
 
 #include "database/objects/MediaLibraryId.hpp"
 
+#include "IgnoreRules.hpp"
+
 namespace lms::scanner
 {
     struct MediaLibraryInfo
@@ -30,7 +32,8 @@ namespace lms::scanner
         db::MediaLibraryId id;
         std::filesystem::path rootDirectory;
         bool firstScan{};
+        IgnoreRules ignoreRules{ {} };
 
-        auto operator<=>(const MediaLibraryInfo& other) const = default;
+        bool operator==(const MediaLibraryInfo&) const = default;
     };
 } // namespace lms::scanner

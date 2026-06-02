@@ -31,8 +31,6 @@
 
 namespace lms::scanner
 {
-    static inline const std::filesystem::path excludeDirFileName{ ".lmsignore" };
-
     struct ScannerSettings
     {
         std::size_t audioScanVersion{};

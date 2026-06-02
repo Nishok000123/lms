@@ -55,6 +55,21 @@ The folder must follow a structure defined by Kodi, as detailed [here](https://k
 The canonical artist name used by _LMS_ is the one specified in the `artist.nfo` file; If an `artist.nfo` exists but does not provide a name, the name of the containing folder is used.
 If no artist info file is provided, _LMS_ will pick the artist name found on the latest release.
 
+## Excluding files from scan
+Place a `.lmsignore` file at the root of a media library to exclude files or directories from scanning.
+
+The file uses a gitignore-inspired reduced syntax:
+* `*.jpg`: ignore all `.jpg` files at any depth
+* `/Unsorted/`: ignore the top-level `Unsorted/` directory only
+* `extras/`: ignore any `extras/` directory at any depth
+* `!cover.jpg`: re-include a file previously matched by a broader rule
+* `?`: matches any single character except `/`
+* `[abc]`: character class
+
+Lines starting with `#` are comments. An empty file has no effect.
+
+__Note__: only one `.lmsignore` file per library root is supported; files placed in subdirectories are ignored.
+
 ### Filtering
 It is possible to apply global filters on your collection using `genre`, `mood`, `grouping`, `language`, `codec`, and by music library. More tags, including custom ones, can be added in the database administration settings.
 

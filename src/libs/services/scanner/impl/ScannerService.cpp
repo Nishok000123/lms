@@ -108,6 +108,7 @@ namespace lms::scanner
                 info.firstScan = mediaLibrary->isEmpty();
                 info.id = mediaLibrary->getId();
                 info.rootDirectory = mediaLibrary->getPath().lexically_normal();
+                info.ignoreRules = loadIgnoreRules(info.rootDirectory / ".lmsignore");
 
                 settings->mediaLibraries.push_back(info);
             });

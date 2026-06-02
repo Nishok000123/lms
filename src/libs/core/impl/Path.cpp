@@ -21,8 +21,6 @@
 
 #include <algorithm>
 #include <array>
-#include <cassert>
-#include <unistd.h>
 
 #include "core/String.hpp"
 
@@ -35,22 +33,13 @@ namespace lms::core::pathUtils
         return (std::find(std::cbegin(supportedExtensions), std::cend(supportedExtensions), extension) != std::cend(supportedExtensions));
     }
 
-    bool isPathInRootPath(const std::filesystem::path& path, const std::filesystem::path& rootPathArg, const std::filesystem::path* excludeDirFileName)
+    bool isPathInRootPath(const std::filesystem::path& path, const std::filesystem::path& rootPathArg)
     {
         std::filesystem::path curPath{ path };
         std::filesystem::path rootPath{ rootPathArg.has_filename() ? rootPathArg : rootPathArg.parent_path() };
 
         while (true)
         {
-            if (excludeDirFileName && !excludeDirFileName->empty())
-            {
-                assert(!excludeDirFileName->has_parent_path());
-
-                std::error_code ec;
-                if (std::filesystem::exists(curPath / *excludeDirFileName, ec))
-                    return false;
-            }
-
             if (curPath == rootPath)
                 return true;
 

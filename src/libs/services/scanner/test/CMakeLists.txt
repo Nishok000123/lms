@@ -3,6 +3,7 @@ include(GoogleTest)
 add_executable(test-scanner
 	ArtistInfo.cpp
 	AudioFileUtils.cpp
+	IgnoreFilter.cpp
 	Lyrics.cpp
 	PlayList.cpp
 	ScannerStats.cpp
