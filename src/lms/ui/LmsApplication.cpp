@@ -53,20 +53,15 @@
 #include "ModalManager.hpp"
 #include "NotificationContainer.hpp"
 #include "PlayQueue.hpp"
-#include "SettingsView.hpp"
 #include "admin/About.hpp"
-#include "admin/DebugToolsView.hpp"
+#include "admin/AdminView.hpp"
 #include "admin/InitWizardView.hpp"
-#include "admin/MediaLibrariesView.hpp"
-#include "admin/ScanSettingsView.hpp"
-#include "admin/ScannerController.hpp"
-#include "admin/UserView.hpp"
-#include "admin/UsersView.hpp"
 #include "common/Template.hpp"
 #include "explore/Explore.hpp"
 #include "explore/Filters.hpp"
 #include "resource/ArtworkResource.hpp"
 #include "resource/AudioTranscodingResource.hpp"
+#include "settings/SettingsView.hpp"
 
 namespace lms::ui
 {
@@ -103,7 +98,11 @@ namespace lms::ui
             res->use(appRoot + "playqueue");
             res->use(appRoot + "release");
             res->use(appRoot + "releases");
-            res->use(appRoot + "settings");
+            res->use(appRoot + "settings-audio");
+            res->use(appRoot + "settings-password");
+            res->use(appRoot + "settings-services");
+            res->use(appRoot + "settings-subsonic");
+            res->use(appRoot + "settings-ui");
             res->use(appRoot + "tracklist");
             res->use(appRoot + "tracklists");
             res->use(appRoot + "tracks");
@@ -134,12 +133,7 @@ namespace lms::ui
             IdxExplore = 0,
             IdxPlayQueue,
             IdxSettings,
-            IdxAdminLibraries,
-            IdxAdminScanSettings,
-            IdxAdminScanner,
-            IdxAdminUsers,
-            IdxAdminUser,
-            IdxAdminDebugTools,
+            IdxAdmin,
         };
 
         void handlePathChange(Wt::WStackedWidget& stack, bool isAdmin)
@@ -159,13 +153,8 @@ namespace lms::ui
                 { "/tracklists", IdxExplore, false, Wt::WString::tr("Lms.Explore.tracklists") },
                 { "/tracklist", IdxExplore, false, std::nullopt },
                 { "/playqueue", IdxPlayQueue, false, Wt::WString::tr("Lms.PlayQueue.playqueue") },
-                { "/settings", IdxSettings, false, Wt::WString::tr("Lms.Settings.settings") },
-                { "/admin/libraries", IdxAdminLibraries, true, Wt::WString::tr("Lms.Admin.MediaLibraries.media-libraries") },
-                { "/admin/scan-settings", IdxAdminScanSettings, true, Wt::WString::tr("Lms.Admin.Database.scan-settings") },
-                { "/admin/scanner", IdxAdminScanner, true, Wt::WString::tr("Lms.Admin.ScannerController.scanner") },
-                { "/admin/users", IdxAdminUsers, true, Wt::WString::tr("Lms.Admin.Users.users") },
-                { "/admin/user", IdxAdminUser, true, std::nullopt },
-                { "/admin/debug-tools", IdxAdminDebugTools, true, Wt::WString::tr("Lms.Admin.DebugTools.debug-tools") },
+                { "/settings", IdxSettings, false, std::nullopt },
+                { "/admin", IdxAdmin, true, std::nullopt },
             };
 
             LMS_LOG(UI, DEBUG, "Internal path changed to '" << wApp->internalPath() << "'");
@@ -459,7 +448,21 @@ namespace lms::ui
 
         Filters* filters{ navbar->bindNew<Filters>("filters") };
         navbar->bindString("username", std::string{ getUserLoginName() }, Wt::TextFormat::Plain);
-        navbar->bindNew<Wt::WAnchor>("settings", Wt::WLink{ Wt::LinkType::InternalPath, "/settings" }, Wt::WString::tr("Lms.Settings.menu-settings"));
+
+        navbar->bindNew<Wt::WAnchor>("settings-ui", Wt::WLink{ Wt::LinkType::InternalPath, "/settings/ui" }, Wt::WString::tr("Lms.Settings.menu-ui"));
+        navbar->bindNew<Wt::WAnchor>("settings-audio", Wt::WLink{ Wt::LinkType::InternalPath, "/settings/audio" }, Wt::WString::tr("Lms.Settings.menu-audio"));
+        if (core::Service<core::IConfig>::get()->getBool("api-subsonic", true))
+        {
+            navbar->setCondition("if-has-subsonic-api-menu", true);
+            navbar->bindNew<Wt::WAnchor>("settings-subsonic", Wt::WLink{ Wt::LinkType::InternalPath, "/settings/subsonic" }, Wt::WString::tr("Lms.Settings.menu-subsonic"));
+        }
+        navbar->bindNew<Wt::WAnchor>("settings-services", Wt::WLink{ Wt::LinkType::InternalPath, "/settings/services" }, Wt::WString::tr("Lms.Settings.menu-services"));
+
+        if (getAuthBackend() == AuthenticationBackend::Internal)
+        {
+            navbar->setCondition("if-has-change-password-menu", true);
+            navbar->bindNew<Wt::WAnchor>("settings-password", Wt::WLink{ Wt::LinkType::InternalPath, "/settings/password" }, Wt::WString::tr("Lms.Settings.menu-password"));
+        }
 
         {
             Wt::WAnchor* logout{ navbar->bindNew<Wt::WAnchor>("logout") };
@@ -499,14 +502,7 @@ namespace lms::ui
 
         // Admin stuff
         if (getUserType() == db::UserType::ADMIN)
-        {
-            mainStack->addNew<MediaLibrariesView>();
-            mainStack->addNew<ScanSettingsView>();
-            mainStack->addNew<ScannerController>();
-            mainStack->addNew<UsersView>();
-            mainStack->addNew<UserView>();
-            mainStack->addNew<DebugToolsView>();
-        }
+            mainStack->addNew<AdminView>();
 
         explore->getPlayQueueController().setMaxTrackCountToEnqueue(_playQueue->getCapacity());
 

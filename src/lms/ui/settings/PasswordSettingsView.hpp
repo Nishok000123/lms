@@ -23,14 +23,12 @@
 
 namespace lms::ui
 {
-
-    class SettingsView : public Wt::WContainerWidget
+    class PasswordSettingsView : public Wt::WContainerWidget
     {
     public:
-        SettingsView();
+        PasswordSettingsView();
 
     private:
         void refreshView();
     };
-
 } // namespace lms::ui

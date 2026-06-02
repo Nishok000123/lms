@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<messages xmlns:if="Wt.WTemplate.conditions">
+
+<message id="Lms.Settings.services.template">
+	<form class="row g-3">
+		<legend>${tr:Lms.Settings.services}</legend>
+		<div class="col-lg-6">
+			<label class="form-label" for="${id:scrobbling-backend}">
+				${tr:Lms.Settings.scrobbling}
+			</label>
+			${scrobbling-backend class="form-control"}
+			<div class="invalid-feedback">
+				${scrobbling-backend-info class="help-block"}
+			</div>
+		</div>
+		<div class="col-lg-6">
+			<label class="form-label" for="${id:feedback-backend}">
+				${tr:Lms.Settings.feedback}
+			</label>
+			${feedback-backend class="form-control"}
+			<div class="invalid-feedback">
+				${feedback-backend-info class="help-block"}
+			</div>
+		</div>
+		<div class="col-lg-12">
+			<label class="form-label" for="${id:listenbrainz-token}">
+				${tr:Lms.Settings.backend.listenbrainz-token}
+			</label>
+			<div class="input-group mb-3">
+				${listenbrainz-token class="form-control"}
+				${listenbrainz-token-visibility-btn class="btn btn-outline-secondary"}
+				<div class="invalid-feedback">
+					${listenbrainz-token-info class="help-block"}
+				</div>
+			</div>
+		</div>
+	</form>
+	<hr/>
+	${save-btn class="btn btn-primary me-1"}${discard-btn class="btn btn-secondary"}
+</message>
+
+</messages>
