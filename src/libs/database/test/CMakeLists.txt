@@ -27,7 +27,6 @@ add_executable(test-database
 	TrackArtistLink.cpp
 	TrackBookmark.cpp
 	TrackEmbeddedImage.cpp
-	TrackFeatures.cpp
 	TrackList.cpp
 	TrackLyrics.cpp
 	User.cpp
@@ -36,6 +35,7 @@ add_executable(test-database
 target_link_libraries(test-database PRIVATE
 	lmsdatabase
 	GTest::GTest
+	GTest::gtest_main
 	)
 
 if (NOT CMAKE_CROSSCOMPILING)

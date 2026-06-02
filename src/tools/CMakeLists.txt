@@ -1,4 +1,5 @@
 add_subdirectory(audioinfo)
 add_subdirectory(audioplay)
 add_subdirectory(db-generator)
+add_subdirectory(musicnn)
 add_subdirectory(recommendation)

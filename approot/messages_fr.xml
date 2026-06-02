@@ -94,13 +94,15 @@
 <message id="Lms.Admin.Database.misc">Divers</message>
 <message id="Lms.Admin.Database.monthly">Tous les mois</message>
 <message id="Lms.Admin.Database.never">Jamais</message>
+<message id="Lms.Admin.Database.recommendation-engine-not-supported">Ce moteur n'est pas pris en charge</message>
+<message id="Lms.Admin.Database.recommendation-engine-type">Moteur de recommandation</message>
+<message id="Lms.Admin.Database.recommendation-engine-type.audio-similarity">Similarité audio</message>
+<message id="Lms.Admin.Database.recommendation-engine-type.clusters">Tags</message>
+<message id="Lms.Admin.Database.recommendation-engine-type.none">Aucun</message>
 <message id="Lms.Admin.Database.scan-aborted">Scan interrompu !</message>
 <message id="Lms.Admin.Database.scan-complete">Scan terminé : {1} fichiers, {2} ajouts, {3} mises à jour, {4} suppressions, {5} duplicatas, {6} erreurs</message>
 <message id="Lms.Admin.Database.scan-launched">Scan lancé !</message>
 <message id="Lms.Admin.Database.scan-settings">Options </message>
-<message id="Lms.Admin.Database.similarity-engine-type">Moteur de similarité</message>
-<message id="Lms.Admin.Database.similarity-engine-type.clusters">Basé sur les tags</message>
-<message id="Lms.Admin.Database.similarity-engine-type.none">Aucun</message>
 <message id="Lms.Admin.Database.skip-single-release-playlists">Ignorer les playlists contenant des pistes d'un même album</message>
 <message id="Lms.Admin.Database.tag-delimiter-must-not-contain-only-spaces">Le délimiteur de tag ne doit pas comporter uniquement des espaces</message>
 <message id="Lms.Admin.Database.tag-parsing">Analyse des tags</message>
@@ -111,6 +113,7 @@
 <!--Scanner Controller-->
 <message id="Lms.Admin.ScannerController.bad-duration">Impossible de récupérer la durée de la piste</message>
 <message id="Lms.Admin.ScannerController.bad-embedded-image">Impossible de lire l'image à l'indice {1} : {2}</message>
+<message id="Lms.Admin.ScannerController.cannot-extract-musicnn-embeddings">Impossible d'extraire les embeddings MusicNN : {1}</message>
 <message id="Lms.Admin.ScannerController.cannot-read-artist-info-file">Impossible d'analyser le fichier d'informations sur l'artiste</message>
 <message id="Lms.Admin.ScannerController.cannot-read-audio-file">Impossible d'analyser le fichier audio</message>
 <message id="Lms.Admin.ScannerController.cannot-read-file">Impossible de lire le fichier ({1})</message>
@@ -148,9 +151,10 @@
 <message id="Lms.Admin.ScannerController.step-checking-for-removed-files">Vérification des fichiers supprimés... {1}%</message>
 <message id="Lms.Admin.ScannerController.step-compact">Compactage de la base de données...</message>
 <message id="Lms.Admin.ScannerController.step-compute-cluster-stats">Calcul des statistiques... {1}%</message>
+<message id="Lms.Admin.ScannerController.step-extract-musicnn-embeddings">Extraction des embeddings MusicNN : {1} sur {2} fichiers ({3}%)</message>
 <message id="Lms.Admin.ScannerController.step-optimize">Optimisation de la base de données... {1}%...</message>
 <message id="Lms.Admin.ScannerController.step-reconciliate-artists">Reconciliation des artistes: {1} entrées...</message>
-<message id="Lms.Admin.ScannerController.step-reloading-similarity-engine">Rechargement du moteur de recommandation : {1}%...</message>
+<message id="Lms.Admin.ScannerController.step-reloading-recommendation-engine">Rechargement du moteur de recommandation : {1}%...</message>
 <message id="Lms.Admin.ScannerController.step-removing-orphaned-entries">Retrait des entrées orphelines: {1} entrées...</message>
 <message id="Lms.Admin.ScannerController.step-scanning-files">Analyse des bibliothèques : {1} fichiers...</message>
 <message id="Lms.Admin.ScannerController.step-status">Statut de l'étape</message>
@@ -160,7 +164,7 @@
 <message id="Lms.Admin.DebugTools.debug-tools">Outils de débogage</message>
 
 <!--Db-->
-<message id="Lms.Admin.DebugTools.Db.export-query-plans">Exporter les plans de requête</message>
+<message id="Lms.Admin.DebugTools.Db.export-query-profiling">Exporter les données de profilage des requêtes</message>
 <message id="Lms.Admin.DebugTools.Db.db">Base de données</message>
 
 <!--Tracing-->
@@ -277,13 +281,13 @@
 <!--Explore:Artist-->
 <message id="Lms.Explore.Artist.appears-on">Apparaît dans</message>
 <message id="Lms.Explore.Artist.biography">Biographie</message>
-<message id="Lms.Explore.Artist.similar-artists">Artistes similaires</message>
+<message id="Lms.Explore.Artist.related-artists">Artistes associés</message>
 
 <!--Explore:Release-->
 <message id="Lms.Explore.Release.copyright">Copyright</message>
 <message id="Lms.Explore.Release.disc">Disque {1}</message>
 <message id="Lms.Explore.Release.other-versions">Autres versions</message>
-<message id="Lms.Explore.Release.similar-releases">Albums similaires</message>
+<message id="Lms.Explore.Release.related-releases">Albums associés</message>
 <message id="Lms.Explore.Release.type">Type</message>
 <message id="Lms.Explore.Release.type-primary-album">Album</message>
 <message id="Lms.Explore.Release.type-primary-broadcast">Diffusion</message>

@@ -21,6 +21,7 @@
 
 #include <algorithm>
 #include <random>
+#include <type_traits>
 
 namespace lms::core::random
 {
@@ -43,10 +44,34 @@ namespace lms::core::random
         return dist(getRandGenerator());
     }
 
+    template<typename RandomEngine, typename Container>
+        requires std::is_floating_point_v<typename Container::value_type>
+    void fillContainer(RandomEngine& randomEngine, Container& container, typename Container::value_type min, typename Container::value_type max)
+    {
+        std::uniform_real_distribution<typename Container::value_type> distrib{ min, max };
+        for (auto& v : container)
+            v = distrib(randomEngine);
+    }
+
+    template<typename RandomEngine, typename Container>
+        requires std::is_integral_v<typename Container::value_type>
+    void fillContainer(RandomEngine& randomEngine, Container& container, typename Container::value_type min, typename Container::value_type max)
+    {
+        std::uniform_int_distribution<typename Container::value_type> distrib{ min, max };
+        for (auto& v : container)
+            v = distrib(randomEngine);
+    }
+
     template<typename Container>
     void shuffleContainer(Container& container)
     {
         std::shuffle(std::begin(container), std::end(container), getRandGenerator());
+    }
+
+    template<typename RandomEngine, typename Container>
+    void shuffleContainer(RandomEngine& randomEngine, Container& container)
+    {
+        std::shuffle(std::begin(container), std::end(container), randomEngine);
     }
 
     template<typename Container>

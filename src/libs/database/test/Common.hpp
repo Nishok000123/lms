@@ -36,7 +36,6 @@
 #include "database/objects/Track.hpp"
 #include "database/objects/TrackArtistLink.hpp"
 #include "database/objects/TrackBookmark.hpp"
-#include "database/objects/TrackFeatures.hpp"
 #include "database/objects/TrackList.hpp"
 #include "database/objects/User.hpp"
 
@@ -142,9 +141,8 @@ namespace lms::db::tests
     class DatabaseFixture : public ::testing::Test
     {
     public:
-        ~DatabaseFixture();
+        ~DatabaseFixture() override;
 
-    public:
         static void SetUpTestCase();
         static void TearDownTestCase();
 

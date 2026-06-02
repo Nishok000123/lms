@@ -38,4 +38,11 @@ namespace lms::audio
         throw Exception{ "Unhandled sample type" };
     }
 
+    namespace helpers
+    {
+        std::size_t sampleCountToByteCount(std::size_t sampleCount, PcmSampleType sampleType, unsigned channelCount)
+        {
+            return sampleCount * audio::getSampleSize(sampleType) * channelCount;
+        }
+    } // namespace helpers
 } // namespace lms::audio

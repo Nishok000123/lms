@@ -19,7 +19,7 @@
 
 #pragma once
 
-#include <functional>
+#include <vector>
 
 #include "database/objects/ArtistId.hpp"
 #include "database/objects/ReleaseId.hpp"
@@ -27,18 +27,17 @@
 
 namespace lms::recommendation
 {
-    struct Progress
+    template<typename IdType>
+    struct RecommendationResult
     {
-        std::size_t totalElems{};
-        std::size_t processedElems{};
+        IdType id;
+        float distance{}; // normalized distance in [0, 1]: 0 = most similar, 1 = least similar
     };
-    using ProgressCallback = std::function<void(const Progress&)>;
 
     template<typename IdType>
-    using ResultContainer = std::vector<IdType>;
+    using ResultContainer = std::vector<RecommendationResult<IdType>>;
 
-    using ArtistContainer = ResultContainer<db::ArtistId>;
-    using ReleaseContainer = ResultContainer<db::ReleaseId>;
-    using TrackContainer = ResultContainer<db::TrackId>;
-
+    using ArtistResults = ResultContainer<db::ArtistId>;
+    using ReleaseResults = ResultContainer<db::ReleaseId>;
+    using TrackResults = ResultContainer<db::TrackId>;
 } // namespace lms::recommendation

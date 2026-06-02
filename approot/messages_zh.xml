@@ -92,13 +92,15 @@
 <message id="Lms.Admin.Database.misc">其他</message>
 <message id="Lms.Admin.Database.monthly">每月</message>
 <message id="Lms.Admin.Database.never">从不</message>
+<message id="Lms.Admin.Database.recommendation-engine-not-supported">此引擎不受支持</message>
+<message id="Lms.Admin.Database.recommendation-engine-type">推荐引擎</message>
+<message id="Lms.Admin.Database.recommendation-engine-type.audio-similarity">音频相似性</message>
+<message id="Lms.Admin.Database.recommendation-engine-type.clusters">标签</message>
+<message id="Lms.Admin.Database.recommendation-engine-type.none">无</message>
 <message id="Lms.Admin.Database.scan-aborted">扫描已中止！</message>
 <message id="Lms.Admin.Database.scan-complete">扫描完成：总文件 {1}，添加文件 {2}，更新文件 {3}，删除文件 {4}，重复文件 {5}，错误文件 {6}</message>
 <message id="Lms.Admin.Database.scan-launched">扫描已完成！</message>
 <message id="Lms.Admin.Database.scan-settings">扫描选项</message>
-<message id="Lms.Admin.Database.similarity-engine-type">相似度引擎</message>
-<message id="Lms.Admin.Database.similarity-engine-type.clusters">基于标签</message>
-<message id="Lms.Admin.Database.similarity-engine-type.none">无</message>
 <message id="Lms.Admin.Database.skip-single-release-playlists">跳过仅包含同一专辑曲目的播放列表</message>
 <message id="Lms.Admin.Database.tag-delimiter-must-not-contain-only-spaces">标签分隔符不能仅由空格组成</message>
 <message id="Lms.Admin.Database.tag-parsing">标签解析</message>
@@ -109,6 +111,7 @@
 <!--Scanner Controller-->
 <message id="Lms.Admin.ScannerController.bad-duration">无法获得音轨时间</message>
 <message id="Lms.Admin.ScannerController.bad-embedded-image">无法读取索引 {1} 处的图片：{2}</message>
+<message id="Lms.Admin.ScannerController.cannot-extract-musicnn-embeddings">无法提取 MusicNN 嵌入：{1}</message>
 <message id="Lms.Admin.ScannerController.cannot-read-artist-info-file">无法解析艺术家信息文件</message>
 <message id="Lms.Admin.ScannerController.cannot-read-audio-file">无法解析文件</message>
 <message id="Lms.Admin.ScannerController.cannot-read-file">无法读取文件（{1}）</message>
@@ -146,9 +149,10 @@
 <message id="Lms.Admin.ScannerController.step-checking-for-removed-files">检查文件中... {1}%</message>
 <message id="Lms.Admin.ScannerController.step-compact">正在压缩数据库...</message>
 <message id="Lms.Admin.ScannerController.step-compute-cluster-stats">正在计算统计信息... {1}%</message>
+<message id="Lms.Admin.ScannerController.step-extract-musicnn-embeddings">正在提取 MusicNN 嵌入：{1} / {2} 个文件（{3}%）</message>
 <message id="Lms.Admin.ScannerController.step-optimize">正在优化数据库... {1}%...</message>
 <message id="Lms.Admin.ScannerController.step-reconciliate-artists">整理艺术家：{1} 条记录...</message>
-<message id="Lms.Admin.ScannerController.step-reloading-similarity-engine">重载相似引擎中 {1}%...</message>
+<message id="Lms.Admin.ScannerController.step-reloading-recommendation-engine">正在重新加载推荐引擎：{1}%...</message>
 <message id="Lms.Admin.ScannerController.step-removing-orphaned-entries">移除孤立条目：{1} 条记录...</message>
 <message id="Lms.Admin.ScannerController.step-scanning-files">库分析：{1} 个文件...</message>
 <message id="Lms.Admin.ScannerController.step-status">当前步骤状态</message>
@@ -158,7 +162,7 @@
 <message id="Lms.Admin.DebugTools.debug-tools">调试工具</message>
 
 <!--Db-->
-<message id="Lms.Admin.DebugTools.Db.export-query-plans">导出查询计划</message>
+<message id="Lms.Admin.DebugTools.Db.export-query-profiling">导出查询分析数据</message>
 <message id="Lms.Admin.DebugTools.Db.db">数据库</message>
 
 <!--Tracing-->
@@ -248,13 +252,13 @@
 <!--Explore:Artist-->
 <message id="Lms.Explore.Artist.appears-on">出现于</message>
 <message id="Lms.Explore.Artist.biography">简介</message>
-<message id="Lms.Explore.Artist.similar-artists">相似歌手</message>
+<message id="Lms.Explore.Artist.related-artists">相关歌手</message>
 
 <!--Explore:Release-->
 <message id="Lms.Explore.Release.copyright">版权所有</message>
 <message id="Lms.Explore.Release.disc">唱片 {1}</message>
 <message id="Lms.Explore.Release.other-versions">其他版本</message>
-<message id="Lms.Explore.Release.similar-releases">相似专辑</message>
+<message id="Lms.Explore.Release.related-releases">相关专辑</message>
 <message id="Lms.Explore.Release.type">类型</message>
 <message id="Lms.Explore.Release.type-primary-album">专辑</message>
 <message id="Lms.Explore.Release.type-primary-broadcast">广播</message>

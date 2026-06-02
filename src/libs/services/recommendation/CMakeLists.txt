@@ -1,13 +1,10 @@
 
 add_library(lmsrecommendation STATIC
 	impl/clusters/ClustersEngine.cpp
-	impl/features/FeaturesEngineCache.cpp
-	impl/features/FeaturesEngine.cpp
-	impl/features/FeaturesDefs.cpp
-	impl/playlist-constraints/ConsecutiveArtists.cpp
-	impl/playlist-constraints/ConsecutiveReleases.cpp
-	impl/playlist-constraints/DuplicateTracks.cpp
-	impl/PlaylistGeneratorService.cpp
+	impl/audio-similarity/musicnn/MusicNNEmbeddingEngine.cpp
+	impl/audio-similarity/musicnn/MusicNNEmbeddingProvider.cpp
+	impl/track-selection-constraints/SameArtistConstraint.cpp
+	impl/track-selection-constraints/SameReleaseConstraint.cpp
 	impl/RecommendationService.cpp
 	)
 
@@ -21,9 +18,20 @@ target_include_directories(lmsrecommendation PRIVATE
 	)
 
 target_link_libraries(lmsrecommendation PRIVATE
-	lmssom
+	lmsaudio
+	lmsmath
 	)
 
 target_link_libraries(lmsrecommendation PUBLIC
+	lmscore
 	lmsdatabase
 	)
+
+# Should be safe enough for what we're doing
+target_compile_options(lmsrecommendation PRIVATE
+	$<$<NOT:$<CONFIG:Debug>>:-ffast-math>
+	)
+
+if(BUILD_TESTING)
+	add_subdirectory(test)
+endif()

@@ -37,8 +37,8 @@
 
 #include "audio/IAudioOutput.hpp"
 #include "database/IDb.hpp"
-#include "database/IQueryPlanRecorder.hpp"
 #include "database/Session.hpp"
+#include "database/profiling/IQueryProfiler.hpp"
 #include "image/Image.hpp"
 #include "services/artwork/IArtworkService.hpp"
 #include "services/auth/IAuthTokenService.hpp"
@@ -47,7 +47,6 @@
 #include "services/feedback/IFeedbackService.hpp"
 #include "services/jukebox//IJukeboxService.hpp"
 #include "services/podcast/IPodcastService.hpp"
-#include "services/recommendation/IPlaylistGeneratorService.hpp"
 #include "services/recommendation/IRecommendationService.hpp"
 #include "services/scanner/IScannerService.hpp"
 #include "services/scrobbling/IScrobblingService.hpp"
@@ -404,7 +403,7 @@ namespace lms
             const std::vector<std::string> wtServerArgs{ generateWtConfig(argv[0]) };
 
             std::vector<const char*> wtArgv(wtServerArgs.size());
-            for (std::size_t i = 0; i < wtServerArgs.size(); ++i)
+            for (std::size_t i{}; i < wtServerArgs.size(); ++i)
             {
                 std::cout << "ARG = " << wtServerArgs[i] << std::endl;
                 wtArgv[i] = wtServerArgs[i].c_str();
@@ -427,9 +426,9 @@ namespace lms
             boost::asio::io_context ioContext; // ioContext used to dispatch all the services that are out of the Wt event loop
             core::IOContextRunner ioContextRunner{ ioContext, getThreadCount(), "Misc" };
 
-            core::Service<db::IQueryPlanRecorder> queryPlanRecorder;
-            if (config->getBool("db-record-query-plans", false))
-                queryPlanRecorder.assign(db::createQueryPlanRecorder());
+            core::Service<db::IQueryProfiler> QueryProfiler;
+            if (config->getBool("db-profile-queries", false))
+                QueryProfiler.assign(db::createQueryProfiler());
 
             // Connection pool size must be twice the number of threads: we have at least 2 io pools with getThreadCount() each and they all may access the database
             auto database{ db::createDb(config->getPath("working-dir", "/var/lms") / "lms.db", getThreadCount() * 2) };
@@ -483,7 +482,6 @@ namespace lms
             image::init(argv[0]);
             core::Service<artwork::IArtworkService> artworkService{ artwork::createArtworkService(*database, server.appRoot() + "/images/unknown-cover.svg", server.appRoot() + "/images/unknown-artist.svg") };
             core::Service<recommendation::IRecommendationService> recommendationService{ recommendation::createRecommendationService(*database) };
-            core::Service<recommendation::IPlaylistGeneratorService> playlistGeneratorService{ recommendation::createPlaylistGeneratorService(*database, *recommendationService) };
             core::Service<scanner::IScannerService> scannerService{ scanner::createScannerService(*database, cachePath) };
             core::Service<transcoding::ITranscodeService> transcodingService{ transcoding::createTranscodeService() };
             core::Service<podcast::IPodcastService> podcastService{ podcast::createPodcastService(ioContext, *database, cachePath / "podcasts") };
@@ -491,10 +489,12 @@ namespace lms
             const auto jukeboxAudioBackend{ getJukeboxAudioOutputBackend() };
             core::Service<jukebox::IJukeboxService> jukeboxService{ jukeboxAudioBackend ? jukebox::createJukeboxService(*database, *jukeboxAudioBackend) : nullptr };
 
-            scannerService->getEvents().scanComplete.connect([&] {
-                // Flush cover cache even if no changes:
-                // covers may be external files that changed and we don't keep track of them for now (but we should)
-                artworkService->flushCache();
+            scannerService->getEvents().scanComplete.connect([&](const scanner::ScanStats& stats) {
+                if (stats.getChangesCount() > 0)
+                    artworkService->flushCache();
+
+                if (stats.featureExtractions > 0)
+                    recommendationService->requestReload();
             });
 
             core::Service<feedback::IFeedbackService> feedbackService{ feedback::createFeedbackService(ioContext, *database) };

@@ -94,13 +94,15 @@
 <message id="Lms.Admin.Database.misc">Miscellaneous</message>
 <message id="Lms.Admin.Database.monthly">Monthly</message>
 <message id="Lms.Admin.Database.never">Never</message>
+<message id="Lms.Admin.Database.recommendation-engine-not-supported">This engine is not supported</message>
+<message id="Lms.Admin.Database.recommendation-engine-type">Recommendation engine</message>
+<message id="Lms.Admin.Database.recommendation-engine-type.audio-similarity">Audio similarity</message>
+<message id="Lms.Admin.Database.recommendation-engine-type.clusters">Tags</message>
+<message id="Lms.Admin.Database.recommendation-engine-type.none">None</message>
 <message id="Lms.Admin.Database.scan-aborted">Scan aborted!</message>
 <message id="Lms.Admin.Database.scan-complete">Scan complete: {1} total files, {2} additions, {3} updates, {4} deletions, {5} duplicates, {6} errors</message>
 <message id="Lms.Admin.Database.scan-launched">Scan launched!</message>
 <message id="Lms.Admin.Database.scan-settings">Scan settings</message>
-<message id="Lms.Admin.Database.similarity-engine-type">Similarity engine</message>
-<message id="Lms.Admin.Database.similarity-engine-type.clusters">Tag-based</message>
-<message id="Lms.Admin.Database.similarity-engine-type.none">None</message>
 <message id="Lms.Admin.Database.skip-single-release-playlists">Skip playlists that contain tracks from the same album</message>
 <message id="Lms.Admin.Database.tag-delimiter-must-not-contain-only-spaces">The tag delimiter must not consist solely of spaces</message>
 <message id="Lms.Admin.Database.tag-parsing">Tag parsing</message>
@@ -111,6 +113,7 @@
 <!--Scanner Controller-->
 <message id="Lms.Admin.ScannerController.bad-duration">Cannot get track duration</message>
 <message id="Lms.Admin.ScannerController.bad-embedded-image">Unable to read the image at index {1}: {2}</message>
+<message id="Lms.Admin.ScannerController.cannot-extract-musicnn-embeddings">Cannot extract MusicNN embeddings: {1}</message>
 <message id="Lms.Admin.ScannerController.cannot-read-artist-info-file">Cannot parse artist info file</message>
 <message id="Lms.Admin.ScannerController.cannot-read-audio-file">Cannot parse audio file</message>
 <message id="Lms.Admin.ScannerController.cannot-read-file">Cannot read file ({1})</message>
@@ -148,11 +151,12 @@
 <message id="Lms.Admin.ScannerController.step-checking-for-removed-files">Checking for removed files... {1}%</message>
 <message id="Lms.Admin.ScannerController.step-compact">Compacting database...</message>
 <message id="Lms.Admin.ScannerController.step-compute-cluster-stats">Computing stats... {1}%</message>
+<message id="Lms.Admin.ScannerController.step-extract-musicnn-embeddings">Extracting MusicNN embeddings: {1} of {2} files ({3}%)</message>
 <message id="Lms.Admin.ScannerController.step-optimize">Optimizing database... {1}%...</message>
 <message id="Lms.Admin.ScannerController.step-reconciliate-artists">Reconciliating artists: {1} entries...</message>
-<message id="Lms.Admin.ScannerController.step-reloading-similarity-engine">Reloading similarity engine: {1}%...</message>
+<message id="Lms.Admin.ScannerController.step-reloading-recommendation-engine">Reloading recommendation engine: {1}%...</message>
 <message id="Lms.Admin.ScannerController.step-removing-orphaned-entries">Removing orphaned entries: {1} entries...</message>
-<message id="Lms.Admin.ScannerController.step-scanning-files">Library analysis: {1} files...</message>
+<message id="Lms.Admin.ScannerController.step-scanning-files">Analyzing library: {1} files...</message>
 <message id="Lms.Admin.ScannerController.step-status">Step status</message>
 <message id="Lms.Admin.ScannerController.step-updating-library-fields">Updating library fields: {1} entries</message>
 
@@ -160,7 +164,7 @@
 <message id="Lms.Admin.DebugTools.debug-tools">Debug tools</message>
 
 <!--Db-->
-<message id="Lms.Admin.DebugTools.Db.export-query-plans">Export query plans</message>
+<message id="Lms.Admin.DebugTools.Db.export-query-profiling">Export query profiling data</message>
 <message id="Lms.Admin.DebugTools.Db.db">Database</message>
 
 <!--Tracing-->
@@ -277,13 +281,13 @@
 <!--Explore:Artist-->
 <message id="Lms.Explore.Artist.appears-on">Appears on</message>
 <message id="Lms.Explore.Artist.biography">Biography</message>
-<message id="Lms.Explore.Artist.similar-artists">Similar artists</message>
+<message id="Lms.Explore.Artist.related-artists">Related artists</message>
 
 <!--Explore:Release-->
 <message id="Lms.Explore.Release.copyright">Copyright</message>
 <message id="Lms.Explore.Release.disc">Disc {1}</message>
 <message id="Lms.Explore.Release.other-versions">Other versions</message>
-<message id="Lms.Explore.Release.similar-releases">Similar albums</message>
+<message id="Lms.Explore.Release.related-releases">Related albums</message>
 <message id="Lms.Explore.Release.type">Type</message>
 <message id="Lms.Explore.Release.type-primary-album">Album</message>
 <message id="Lms.Explore.Release.type-primary-broadcast">Broadcast</message>

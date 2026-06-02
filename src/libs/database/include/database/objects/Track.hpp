@@ -97,6 +97,8 @@ namespace lms::db
             DirectoryId directory;                                   // if set, tracks in this directory
             std::optional<std::size_t> fileSize;                     // if set, tracks that match this file size
             TrackEmbeddedImageId embeddedImageId;                    // if set, tracks that have this embedded image
+            std::optional<bool> hasMusicNNEmbeddings;                // If set, tracks that have (or not) MusicNN embeddings
+            TrackId lastTrackId;                                     // If set, tracks that are after this one, must be used with sort by id
 
             FindParameters& setFilters(const Filters& _filters)
             {
@@ -191,6 +193,16 @@ namespace lms::db
                 embeddedImageId = _embeddedImageId;
                 return *this;
             }
+            FindParameters& setHasMusicNNEmbeddings(std::optional<bool> _hasMusicNNEmbeddings)
+            {
+                hasMusicNNEmbeddings = _hasMusicNNEmbeddings;
+                return *this;
+            }
+            FindParameters& setLastTrackId(TrackId _lastTrackId)
+            {
+                lastTrackId = _lastTrackId;
+                return *this;
+            }
         };
 
         Track() = default;
@@ -203,19 +215,20 @@ namespace lms::db
         static void find(Session& session, TrackId& lastRetrievedId, std::size_t count, const std::function<void(const Track::pointer&)>& func, MediaLibraryId library = {});
         static void find(Session& session, const IdRange<TrackId>& idRange, const std::function<void(const Track::pointer&)>& func);
         static IdRange<TrackId> findNextIdRange(Session& session, TrackId lastRetrievedId, std::size_t count);
-        static void findAbsoluteFilePath(Session& session, TrackId& lastRetrievedId, std::size_t count, const std::function<void(TrackId trackId, const std::filesystem::path& absoluteFilePath)>& func);
+
+        using TrackLocationVisitor = std::function<void(TrackId trackId, const std::filesystem::path& absoluteFilePath)>;
+        static void findAbsoluteFilePath(Session& session, TrackId& lastRetrievedId, std::size_t count, const TrackLocationVisitor& func);
+        static void findAbsoluteFilePath(Session& session, const FindParameters& params, const TrackLocationVisitor& func);
 
         static bool exists(Session& session, TrackId id);
         static std::vector<pointer> findByRecordingMBID(Session& session, const core::UUID& MBID);
         static std::vector<pointer> findByMBID(Session& session, const core::UUID& MBID);
-        static RangeResults<TrackId> findSimilarTrackIds(Session& session, const std::vector<TrackId>& trackIds, std::optional<Range> range = std::nullopt);
-
-        static RangeResults<TrackId> findIds(Session& session, const FindParameters& parameters);
-        static RangeResults<pointer> find(Session& session, const FindParameters& parameters);
-        static void find(Session& session, const FindParameters& parameters, const std::function<void(const Track::pointer&)>& func);
-        static void find(Session& session, const FindParameters& parameters, bool& moreResults, const std::function<void(const Track::pointer&)>& func);
+        static RangeResults<TrackId> findIds(Session& session, const FindParameters& params);
+        static RangeResults<pointer> find(Session& session, const FindParameters& params);
+        static void find(Session& session, const FindParameters& params, const std::function<void(const Track::pointer&)>& func);
+        static void find(Session& session, const FindParameters& params, bool& moreResults, const std::function<void(const Track::pointer&)>& func);
+        static std::size_t getCount(Session& session, const FindParameters& params);
         static RangeResults<TrackId> findIdsTrackMBIDDuplicates(Session& session, std::optional<Range> range = std::nullopt);
-        static RangeResults<TrackId> findIdsWithRecordingMBIDAndMissingFeatures(Session& session, std::optional<Range> range = std::nullopt);
 
         // Update utility functions
         static void updatePreferredArtwork(Session& session, TrackId trackId, ArtworkId artworkId);

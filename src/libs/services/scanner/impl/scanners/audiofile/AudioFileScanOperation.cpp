@@ -43,8 +43,8 @@
 #include "database/objects/TrackArtistLink.hpp"
 #include "database/objects/TrackEmbeddedImage.hpp"
 #include "database/objects/TrackEmbeddedImageLink.hpp"
-#include "database/objects/TrackFeatures.hpp"
 #include "database/objects/TrackLyrics.hpp"
+#include "database/objects/TrackMusicNNEmbeddings.hpp"
 #include "image/Exception.hpp"
 #include "image/Image.hpp"
 
@@ -554,7 +554,7 @@ namespace lms::scanner
                     info.type = image.type;
                     {
                         LMS_SCOPED_TRACE_DETAILED("Scanner", "ImageHash");
-                        info.hash = core::xxHash3_64(image.data);
+                        info.hash = core::XxHash3_64::hash(image.data);
                     }
                     info.size = image.data.size();
                     info.mimeType = image.mimeType;
@@ -579,6 +579,28 @@ namespace lms::scanner
         {
             addError<AudioFileScanError>(getFilePath());
         }
+    }
+
+    // Returns true if any value actually changed.
+    bool updateAudioProperties(db::Track::pointer& track, const audio::AudioProperties& props)
+    {
+        const bool changed{ track->getDuration() != props.duration
+                            || track->getContainer() != props.container
+                            || track->getCodec() != props.codec
+                            || track->getBitrate() != props.bitrate
+                            || track->getChannelCount() != props.channelCount
+                            || track->getSampleRate() != props.sampleRate
+                            || track->getBitsPerSample() != props.bitsPerSample };
+
+        track.modify()->setDuration(props.duration);
+        track.modify()->setContainer(props.container);
+        track.modify()->setCodec(props.codec);
+        track.modify()->setBitrate(props.bitrate);
+        track.modify()->setChannelCount(props.channelCount);
+        track.modify()->setSampleRate(props.sampleRate);
+        track.modify()->setBitsPerSample(props.bitsPerSample);
+
+        return changed;
     }
 
     AudioFileScanOperation::OperationResult AudioFileScanOperation::processResult()
@@ -700,13 +722,7 @@ namespace lms::scanner
         track.modify()->setScanVersion(getScannerSettings().audioScanVersion);
 
         // Audio properties
-        track.modify()->setDuration(_file->audioProperties.duration);
-        track.modify()->setContainer(_file->audioProperties.container);
-        track.modify()->setCodec(_file->audioProperties.codec);
-        track.modify()->setBitrate(_file->audioProperties.bitrate);
-        track.modify()->setChannelCount(_file->audioProperties.channelCount);
-        track.modify()->setSampleRate(_file->audioProperties.sampleRate);
-        track.modify()->setBitsPerSample(_file->audioProperties.bitsPerSample);
+        const bool audioPropertiesChanged{ updateAudioProperties(track, _file->audioProperties) };
 
         track.modify()->setFileSize(getFileSize());
         track.modify()->setLastWriteTime(getLastWriteTime());
@@ -772,8 +788,11 @@ namespace lms::scanner
 
         track.modify()->setRecordingMBID(_file->track.recordingMBID);
         track.modify()->setTrackMBID(_file->track.mbid);
-        if (auto trackFeatures{ db::TrackFeatures::find(dbSession, track->getId()) })
-            trackFeatures.remove(); // TODO: only if MBID changed?
+        if (audioPropertiesChanged)
+        {
+            if (auto musicnnEmbedding{ db::TrackMusicNNEmbeddings::find(dbSession, track->getId()) })
+                musicnnEmbedding.remove();
+        }
         track.modify()->setCopyright(_file->track.copyright);
         track.modify()->setCopyrightURL(_file->track.copyrightURL);
         track.modify()->setAdvisory(getAdvisory(_file->track.advisory));
