@@ -40,7 +40,7 @@ ARG	BUILD_PACKAGES=" \
 RUN	apk add --no-cache --update ${BUILD_PACKAGES}
 
 # FFmpeg
-ARG	FFMPEG_VERSION=6.1.4
+ARG	FFMPEG_VERSION=6.1.5
 RUN  \
 	DIR=/tmp/ffmpeg && mkdir -p ${DIR} && cd ${DIR} && \
 	curl -sLO https://ffmpeg.org/releases/ffmpeg-${FFMPEG_VERSION}.tar.bz2 && \
@@ -81,7 +81,7 @@ RUN \
 	make -j$(nproc) install 
 
 # WT
-ARG	WT_VERSION=4.12.5
+ARG	WT_VERSION=4.13.2
 ARG WT_DEBUG=OFF
 RUN \
 	DIR=/tmp/wt && mkdir -p ${DIR} && cd ${DIR} && \
@@ -94,7 +94,7 @@ RUN \
 	make -j$(nproc) install 
 
 # STB
-ARG	STB_VERSION=f1c79c02822848a9bed4315b12c8c8f3761e1296
+ARG	STB_VERSION=31c1ad37456438565541f4919958214b6e762fb4
 RUN \
 	DIR=/tmp/stb && mkdir -p ${DIR} && cd ${DIR} && \
 	curl -sLO https://github.com/nothings/stb/archive/${STB_VERSION}.tar.gz && \
@@ -103,7 +103,7 @@ RUN \
 	cp ./*.h ${PREFIX}/include/stb
 
 # TAGLIB
-ARG TAGLIB_VERSION=v2.2
+ARG TAGLIB_VERSION=v2.3
 RUN \
 	DIR=/tmp/taglib && mkdir -p ${DIR} && cd ${DIR} && \
 	curl -sLO https://github.com/taglib/taglib/archive/${TAGLIB_VERSION}.tar.gz && \
