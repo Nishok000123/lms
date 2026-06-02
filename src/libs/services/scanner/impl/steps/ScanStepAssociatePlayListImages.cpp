@@ -183,7 +183,7 @@ namespace lms::scanner
         };
 
         {
-            JobQueue queue{ getJobScheduler(), 20, processJobsDone, 1, 0.85F };
+            JobQueue queue{ getJobScheduler(), processJobsDone };
 
             db::PlayListFileId lastRetrievedId{};
             db::IdRange<db::PlayListFileId> idRange;

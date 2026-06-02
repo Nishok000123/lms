@@ -214,7 +214,7 @@ namespace lms::scanner
         } };
 
         {
-            JobQueue queue{ getJobScheduler(), 50, processResults, 1, 0.85F };
+            JobQueue queue{ getJobScheduler(), processResults, { .maxQueueSize = 50 } };
 
             db::TrackId lastRetrievedTrackId;
             TrackLocation trackLocation;

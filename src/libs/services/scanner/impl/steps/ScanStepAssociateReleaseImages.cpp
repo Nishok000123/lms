@@ -313,7 +313,7 @@ namespace lms::scanner
             _progressCallback(context.currentStepStats);
         };
 
-        JobQueue queue{ getJobScheduler(), 20, processJobsDone, 1, 0.85F };
+        JobQueue queue{ getJobScheduler(), processJobsDone };
 
         db::ReleaseId lastRetrievedReleaseId{};
         db::IdRange<db::ReleaseId> artistIdRange;

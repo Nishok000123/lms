@@ -26,12 +26,12 @@
 
 namespace lms::scanner
 {
-    JobQueue::JobQueue(core::IJobScheduler& scheduler, std::size_t maxQueueSize, ProcessFunction processJobsDoneFunc, std::size_t batchSize, float _drainThreshold)
+    JobQueue::JobQueue(core::IJobScheduler& scheduler, ProcessFunction processJobsDoneFunc, JobQueueParameters params)
         : _scheduler{ scheduler }
-        , _maxQueueSize{ maxQueueSize }
+        , _maxQueueSize{ params.maxQueueSize }
         , _processJobsDoneFunc{ std::move(processJobsDoneFunc) }
-        , _batchSize{ batchSize }
-        , _drainThreshold{ _drainThreshold }
+        , _batchSize{ params.processBatchSize }
+        , _drainThreshold{ params.drainThreshold }
     {
         assert(_scheduler.getJobsDoneCount() == 0);
     }

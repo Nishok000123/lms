@@ -209,7 +209,7 @@ namespace lms::scanner
         };
 
         {
-            JobQueue queue{ getJobScheduler(), scanQueueMaxSize, processDoneJobs, processFileResultsBatchSize, drainRatio };
+            JobQueue queue{ getJobScheduler(), processDoneJobs, { .maxQueueSize = scanQueueMaxSize, .processBatchSize = processFileResultsBatchSize, .drainThreshold = drainRatio } };
 
             std::vector<std::filesystem::directory_entry> filesToScan;
 

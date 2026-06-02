@@ -250,7 +250,7 @@ namespace lms::scanner
         };
 
         {
-            JobQueue queue{ getJobScheduler(), 50, processJobsDone, 1, 0.85F };
+            JobQueue queue{ getJobScheduler(), processJobsDone, { .maxQueueSize = 50 } };
 
             ObjectIdType lastCheckedId;
             std::vector<FileToCheck<ObjectIdType>> filesToCheck;
