@@ -34,6 +34,7 @@
 #include "database/objects/Artwork.hpp"
 #include "database/objects/Image.hpp"
 #include "database/objects/ImageId.hpp"
+#include "database/objects/PlayListFile.hpp"
 #include "database/objects/Release.hpp"
 #include "database/objects/Track.hpp"
 #include "database/objects/TrackEmbeddedImage.hpp"
@@ -160,6 +161,12 @@ namespace lms::artwork
         db::TrackList::pointer trackList{ db::TrackList::find(session, trackListId) };
         if (!trackList)
             return artworkId;
+
+        if (const auto playListFile{ trackList->getPlayListFile() })
+        {
+            if (const db::ArtworkId id{ playListFile->getPreferredArtworkId() }; id.isValid())
+                return id;
+        }
 
         const auto entries{ trackList->getEntries(db::Range{ 0, 10 }) };
         for (const auto& entry : entries.results)

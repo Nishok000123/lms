@@ -153,6 +153,7 @@
 <message id="Lms.Admin.ScannerController.status-in-progress">Skanowanie: krok {1}/{2}</message>
 <message id="Lms.Admin.ScannerController.step-associating-artist-images">Kojarzenie obrazów artystów: {1}%...</message>
 <message id="Lms.Admin.ScannerController.step-associating-external-lyrics">Kojarzenie zewnętrznych tekstów: {1}%...</message>
+<message id="Lms.Admin.ScannerController.step-associating-playlist-images">Kojarzenie obrazów playlist: {1}%...</message>
 <message id="Lms.Admin.ScannerController.step-associating-playlist-tracks">Kojarzenie utworów z playlisty: {1}%...</message>
 <message id="Lms.Admin.ScannerController.step-associating-release-images">Kojarzenie obrazów albumów: {1}%...</message>
 <message id="Lms.Admin.ScannerController.step-associating-track-images">Kojarzenie obrazów ścieżek: {1}%...</message>

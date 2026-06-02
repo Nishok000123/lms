@@ -125,6 +125,7 @@ namespace lms::db
         TrackListType getType() const { return _type; }
         ObjectPtr<User> getUser() const { return _user; }
         UserId getUserId() const { return _user.id(); }
+        ObjectPtr<PlayListFile> getPlayListFile() const { return _playListFile; }
         Wt::WDateTime getLastModifiedDateTime() const { return _lastModifiedDateTime; }
         Wt::WDateTime getCreationDateTime() const { return _creationDateTime; }
 

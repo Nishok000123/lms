@@ -31,12 +31,14 @@
 
 #include "database/IdRange.hpp"
 #include "database/Object.hpp"
+#include "database/objects/ArtworkId.hpp"
 #include "database/objects/DirectoryId.hpp"
 
 LMS_DECLARE_IDTYPE(PlayListFileId)
 
 namespace lms::db
 {
+    class Artwork;
     class Session;
     class Directory;
     class MediaLibrary;
@@ -61,6 +63,8 @@ namespace lms::db
         const Wt::WDateTime& getLastWriteTime() const { return _fileLastWrite; }
         std::size_t getFileSize() const { return _fileSize; }
         std::string_view getName() const { return _name; }
+        const std::filesystem::path& getCoverImageFile() const { return _coverImageFile; }
+        ArtworkId getPreferredArtworkId() const { return _preferredArtwork.id(); }
         std::vector<std::filesystem::path> getFiles() const;
         ObjectPtr<TrackList> getTrackList() const;
         ObjectPtr<Directory> getDirectory() const;
@@ -70,11 +74,14 @@ namespace lms::db
         void setAbsoluteFilePath(const std::filesystem::path& filePath);
         void setLastWriteTime(Wt::WDateTime time) { _fileLastWrite = time; }
         void setFileSize(std::size_t fileSize) { _fileSize = fileSize; }
+        void setCoverImageFile(const std::filesystem::path& file);
         void setMediaLibrary(ObjectPtr<MediaLibrary> mediaLibrary) { _mediaLibrary = getDboPtr(mediaLibrary); }
         void setDirectory(ObjectPtr<Directory> directory);
         void setTrackList(ObjectPtr<TrackList> trackList);
         void setName(std::string_view name);
         void setFiles(std::span<const std::filesystem::path> files);
+
+        static void updatePreferredArtwork(Session& session, PlayListFileId id, ArtworkId artworkId);
 
         template<class Action>
         void persist(Action& a)
@@ -85,9 +92,11 @@ namespace lms::db
             Wt::Dbo::field(a, _fileLastWrite, "file_last_write");
             Wt::Dbo::field(a, _name, "name");
             Wt::Dbo::field(a, _entries, "entries");
+            Wt::Dbo::field(a, _coverImageFile, "cover_image_file");
 
             Wt::Dbo::belongsTo(a, _mediaLibrary, "media_library", Wt::Dbo::OnDeleteSetNull); // don't delete playlist on media library removal, we want to wait for the next scan to have a chance to migrate files
             Wt::Dbo::belongsTo(a, _directory, "directory", Wt::Dbo::OnDeleteCascade);
+            Wt::Dbo::belongsTo(a, _preferredArtwork, "preferred_artwork", Wt::Dbo::OnDeleteSetNull);
             Wt::Dbo::hasOne(a, _trackList, "playlist_file");
         }
 
@@ -106,9 +115,11 @@ namespace lms::db
 
         std::string _name;
         std::string _entries; // A json encoded list of files
+        std::filesystem::path _coverImageFile;
 
         Wt::Dbo::ptr<MediaLibrary> _mediaLibrary;
         Wt::Dbo::ptr<Directory> _directory;
+        Wt::Dbo::ptr<Artwork> _preferredArtwork;
         Wt::Dbo::weak_ptr<TrackList> _trackList;
     };
 } // namespace lms::db

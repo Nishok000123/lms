@@ -53,6 +53,80 @@ one to be/../one to be/normalized/foo.mp3)" };
         EXPECT_EQ(playlist.files[5], "one to be/normalized/foo.mp3");
     }
 
+    TEST(Scanner, playlist_name_trimmed)
+    {
+        std::istringstream is{ R"(#EXTM3U
+#PLAYLIST:  My super playlist        
+01-Foo.mp3)" };
+
+        const PlayList playlist{ parsePlayList(is) };
+        EXPECT_EQ(playlist.name, "My super playlist");
+    }
+
+    TEST(Scanner, playlist_extimg_relative)
+    {
+        std::istringstream is{ R"(#EXTM3U
+#EXTIMG:cover.jpg
+01-Foo.mp3)" };
+
+        const PlayList playlist{ parsePlayList(is) };
+        ASSERT_TRUE(playlist.coverImage.has_value());
+        EXPECT_EQ(*playlist.coverImage, "cover.jpg");
+        ASSERT_EQ(playlist.files.size(), 1);
+    }
+
+    TEST(Scanner, playlist_extimg_absolute)
+    {
+        std::istringstream is{ R"(#EXTM3U
+#EXTIMG:/images/cover.jpg
+01-Foo.mp3)" };
+
+        const PlayList playlist{ parsePlayList(is) };
+        ASSERT_TRUE(playlist.coverImage.has_value());
+        EXPECT_EQ(*playlist.coverImage, "/images/cover.jpg");
+    }
+
+    TEST(Scanner, playlist_extimg_normalized)
+    {
+        std::istringstream is{ R"(#EXTM3U
+#EXTIMG:artwork/../artwork/cover.jpg
+01-Foo.mp3)" };
+
+        const PlayList playlist{ parsePlayList(is) };
+        ASSERT_TRUE(playlist.coverImage.has_value());
+        EXPECT_EQ(*playlist.coverImage, "artwork/cover.jpg");
+    }
+
+    TEST(Scanner, playlist_extimg_trimmed)
+    {
+        std::istringstream is{ R"(#EXTM3U
+#EXTIMG:  cover.jpg   
+01-Foo.mp3)" };
+
+        const PlayList playlist{ parsePlayList(is) };
+        ASSERT_TRUE(playlist.coverImage.has_value());
+        EXPECT_EQ(*playlist.coverImage, "cover.jpg");
+    }
+
+    TEST(Scanner, playlist_extimg_url_ignored)
+    {
+        std::istringstream is{ R"(#EXTM3U
+#EXTIMG:https://example.com/cover.jpg
+01-Foo.mp3)" };
+
+        const PlayList playlist{ parsePlayList(is) };
+        EXPECT_FALSE(playlist.coverImage.has_value());
+    }
+
+    TEST(Scanner, playlist_no_extimg)
+    {
+        std::istringstream is{ R"(#EXTM3U
+01-Foo.mp3)" };
+
+        const PlayList playlist{ parsePlayList(is) };
+        EXPECT_FALSE(playlist.coverImage.has_value());
+    }
+
     TEST(Scanner, playlist_UTF8_bom)
     {
         const unsigned char content[] = { 0xEF, 0xBB, 0xBF, '#', 'E', 'X', 'T', 'M', '3', 'U', '\r', '\n', '\r', '\n', '.', '.', '/', 't', 'e', 's', 't', '.', 'm', 'p', '3', '\r', '\n' };

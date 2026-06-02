@@ -42,6 +42,7 @@
 #include "steps/ScanStepAssociateArtistImages.hpp"
 #include "steps/ScanStepAssociateExternalLyrics.hpp"
 #include "steps/ScanStepAssociateMediumImages.hpp"
+#include "steps/ScanStepAssociatePlayListImages.hpp"
 #include "steps/ScanStepAssociatePlayListTracks.hpp"
 #include "steps/ScanStepAssociateReleaseImages.hpp"
 #include "steps/ScanStepAssociateTrackImages.hpp"
@@ -516,6 +517,7 @@ namespace lms::scanner
         _scanSteps.emplace_back(std::make_unique<ScanStepCheckForRemovedFiles>(params));
         _scanSteps.emplace_back(std::make_unique<ScanStepArtistReconciliation>(params));
         _scanSteps.emplace_back(std::make_unique<ScanStepAssociatePlayListTracks>(params));
+        _scanSteps.emplace_back(std::make_unique<ScanStepAssociatePlayListImages>(params));
         _scanSteps.emplace_back(std::make_unique<ScanStepUpdateLibraryFields>(params));
         _scanSteps.emplace_back(std::make_unique<ScanStepAssociateReleaseImages>(params));
         _scanSteps.emplace_back(std::make_unique<ScanStepAssociateArtistImages>(params)); // must come after ScanStepAssociateReleaseImages (because and artist image can fallback on a release image)

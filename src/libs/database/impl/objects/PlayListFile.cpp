@@ -24,6 +24,7 @@
 
 #include "core/ILogger.hpp"
 #include "database/Session.hpp"
+#include "database/objects/Artwork.hpp"
 #include "database/objects/Directory.hpp"
 #include "database/objects/MediaLibrary.hpp"
 #include "database/objects/Track.hpp"
@@ -180,5 +181,20 @@ namespace lms::db
 
         root["files"] = std::move(fileArray);
         _entries = Wt::Json::serialize(root);
+    }
+
+    void PlayListFile::setCoverImageFile(const std::filesystem::path& file)
+    {
+        _coverImageFile = file;
+    }
+
+    void PlayListFile::updatePreferredArtwork(Session& session, PlayListFileId id, ArtworkId artworkId)
+    {
+        session.checkWriteTransaction();
+
+        if (artworkId.isValid())
+            utils::executeCommand(*session.getDboSession(), "UPDATE playlist_file SET preferred_artwork_id = ? WHERE id = ?", artworkId, id);
+        else
+            utils::executeCommand(*session.getDboSession(), "UPDATE playlist_file SET preferred_artwork_id = NULL WHERE id = ?", id);
     }
 } // namespace lms::db

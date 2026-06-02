@@ -178,6 +178,11 @@ namespace lms::ui
                                      .arg(stepStats.progress()));
             break;
 
+        case ScanStep::AssociatePlayListImages:
+            _stepStatus->setText(Wt::WString::tr("Lms.Admin.ScannerController.step-associating-playlist-images")
+                                     .arg(stepStats.progress()));
+            break;
+
         case ScanStep::AssociatePlayListTracks:
             _stepStatus->setText(Wt::WString::tr("Lms.Admin.ScannerController.step-associating-playlist-tracks")
                                      .arg(stepStats.progress()));

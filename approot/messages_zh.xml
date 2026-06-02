@@ -142,6 +142,7 @@
 <message id="Lms.Admin.ScannerController.status-in-progress">扫描中: 阶段 {1}/{2}</message>
 <message id="Lms.Admin.ScannerController.step-associating-artist-images">关联艺术家图片：{1}%...</message>
 <message id="Lms.Admin.ScannerController.step-associating-external-lyrics">关联外部歌词：{1}%...</message>
+<message id="Lms.Admin.ScannerController.step-associating-playlist-images">关联播放列表图片：{1}%...</message>
 <message id="Lms.Admin.ScannerController.step-associating-playlist-tracks">关联播放列表曲目：{1}%...</message>
 <message id="Lms.Admin.ScannerController.step-associating-release-images">关联专辑封面：{1}%...</message>
 <message id="Lms.Admin.ScannerController.step-associating-track-images">关联曲目图片：{1}%...</message>

@@ -47,6 +47,7 @@ namespace lms::scanner
     {
         AssociateArtistImages,
         AssociateExternalLyrics,
+        AssociatePlayListImages,
         AssociatePlayListTracks,
         AssociateReleaseImages,
         AssociateTrackImages,

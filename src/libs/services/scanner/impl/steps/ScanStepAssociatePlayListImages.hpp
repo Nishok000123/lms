@@ -19,17 +19,19 @@
 
 #pragma once
 
-#include <filesystem>
-#include <optional>
-#include <string>
-#include <vector>
+#include "ScanStepBase.hpp"
 
 namespace lms::scanner
 {
-    struct PlayList
+    class ScanStepAssociatePlayListImages : public ScanStepBase
     {
-        std::string name;
-        std::optional<std::filesystem::path> coverImage;
-        std::vector<std::filesystem::path> files;
+    public:
+        using ScanStepBase::ScanStepBase;
+
+    private:
+        ScanStep getStep() const override { return ScanStep::AssociatePlayListImages; }
+        core::LiteralString getStepName() const override { return "Associate playlist images"; }
+        bool needProcess(const ScanContext& context) const override;
+        void process(ScanContext& context) override;
     };
 } // namespace lms::scanner

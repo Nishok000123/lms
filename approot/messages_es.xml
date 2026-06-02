@@ -144,6 +144,7 @@
 <message id="Lms.Admin.ScannerController.status-in-progress">Escaneando: etapa {1}/{2}</message>
 <message id="Lms.Admin.ScannerController.step-associating-artist-images">Association des images des artistes: {1}%...</message>
 <message id="Lms.Admin.ScannerController.step-associating-external-lyrics">Association des paroles externes: {1}%...</message>
+<message id="Lms.Admin.ScannerController.step-associating-playlist-images">Asignando imágenes de las listas de reproducción: {1}%...</message>
 <message id="Lms.Admin.ScannerController.step-associating-playlist-tracks">Association des pistes des listes de lectures: {1}%...</message>
 <message id="Lms.Admin.ScannerController.step-associating-release-images">Asignando imágenes de los álbumes: {1}%...</message>
 <message id="Lms.Admin.ScannerController.step-associating-track-images">Asignando imágenes de las pistas: {1}%...</message>

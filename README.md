@@ -105,6 +105,12 @@ _LMS_ automatically associates images with each disc in your collection. Name th
 ## Playlist support
 _LMS_ supports playlist files in `m3u` and `m3u8` formats. These playlists are synced during the scan process and are available as public shared playlists.
 
+### Playlist image lookup
+_LMS_ resolves a playlist's cover image in this order:
+1. **`#EXTIMG:` directive**. An explicit path declared inside the playlist file (URLs are ignored).
+2. **Same-name image file**. An image file in the same directory as the playlist that shares the playlist's filename stem.
+3. **First track's artwork** – if neither of the above is found, the artwork of the first track in the playlist is used as a fallback.
+
 ## Lyrics support
 _LMS_ supports lyrics in `lrc` files, `txt` files, and embedded track metadata. Both synchronized and unsynchronized lyrics are supported.
 
