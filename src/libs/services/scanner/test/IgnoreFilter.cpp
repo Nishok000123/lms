@@ -89,7 +89,7 @@ namespace lms::scanner::tests
         const IgnoreRules f{ "jazz/*/liner.nfo\n" };
         EXPECT_TRUE(f.isIgnored("jazz/miles/liner.nfo", IgnoreRules::IsDirectory{ false }));
         EXPECT_TRUE(f.isIgnored("jazz/coltrane/liner.nfo", IgnoreRules::IsDirectory{ false }));
-        EXPECT_FALSE(f.isIgnored("jazz/liner.nfo", IgnoreRules::IsDirectory{ false }));        // no intermediate component
+        EXPECT_FALSE(f.isIgnored("jazz/liner.nfo", IgnoreRules::IsDirectory{ false }));             // no intermediate component
         EXPECT_FALSE(f.isIgnored("jazz/miles/davis/liner.nfo", IgnoreRules::IsDirectory{ false })); // * doesn't cross /
         EXPECT_FALSE(f.isIgnored("rock/miles/liner.nfo", IgnoreRules::IsDirectory{ false }));
     }
