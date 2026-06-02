@@ -48,9 +48,7 @@ namespace lms::scanner
             const std::filesystem::path& coverImageFile{ playListFile->getCoverImageFile() };
             if (!coverImageFile.empty())
             {
-                const std::filesystem::path coverImagePath{ coverImageFile.is_relative()
-                    ? (playListFile->getDirectory()->getAbsolutePath() / coverImageFile).lexically_normal()
-                    : coverImageFile };
+                const std::filesystem::path coverImagePath{ coverImageFile.is_relative() ? (playListFile->getDirectory()->getAbsolutePath() / coverImageFile).lexically_normal() : coverImageFile };
 
                 const db::Image::pointer image{ db::Image::find(session, coverImagePath) };
                 if (image)
