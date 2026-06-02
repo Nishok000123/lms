@@ -135,6 +135,7 @@ namespace lms::api::subsonic
             { "/ping", { handlePingRequest } },
             { "/getLicense", { handleGetLicenseRequest } },
             { "/getOpenSubsonicExtensions", { handleGetOpenSubsonicExtensions, AuthenticationMode::Unauthenticated } },
+            { "/tokenInfo", { handleTokenInfoRequest } },
 
             // Browsing
             { "/getMusicFolders", { handleGetMusicFoldersRequest } },

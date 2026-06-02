@@ -19,6 +19,9 @@
 
 #include <array>
 
+#include "database/Session.hpp"
+#include "database/objects/User.hpp"
+
 #include "endpoints/System.hpp"
 
 namespace lms::api::subsonic
@@ -36,6 +39,17 @@ namespace lms::api::subsonic
         licenseNode.setAttribute("licenseExpires", "2035-09-03T14:46:43");
         licenseNode.setAttribute("email", "foo@bar.com");
         licenseNode.setAttribute("valid", true);
+
+        return response;
+    }
+
+    Response handleTokenInfoRequest(RequestContext& context)
+    {
+        Response response{ Response::createOkResponse(context.getServerProtocolVersion()) };
+        Response::Node& tokenInfoNode{ response.createNode("tokenInfo") };
+
+        auto transaction{ context.getDbSession().createReadTransaction() };
+        tokenInfoNode.setAttribute("username", std::string{ context.getUser()->getLoginName() });
 
         return response;
     }
