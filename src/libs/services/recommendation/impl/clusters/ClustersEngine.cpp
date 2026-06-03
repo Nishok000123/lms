@@ -145,13 +145,6 @@ namespace lms::recommendation
             std::unordered_set<db::TrackId> artistTrackIds;
 
             {
-                db::Track::FindParameters params;
-                params.setArtist(artist->getId(), { db::TrackArtistLinkType::Artist });
-                for (const db::TrackId trackId : db::Track::findIds(session, params).results)
-                    artistTrackIds.insert(trackId);
-            }
-
-            {
                 db::Release::FindParameters params;
                 params.setArtist(artist->getId());
                 for (const db::ReleaseId releaseId : db::Release::findIds(session, params).results)

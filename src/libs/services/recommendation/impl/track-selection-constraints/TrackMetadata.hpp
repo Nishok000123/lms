@@ -31,7 +31,7 @@ namespace lms::recommendation
     struct TrackMetadata
     {
         db::ReleaseId releaseId;             // invalid if track has no release
-        std::vector<db::ArtistId> artistIds; // sorted; track-level + album-level artists
+        std::vector<db::ArtistId> artistIds; // sorted; album artists only
         // Future: db::MediaLibraryId mediaLibraryId;
     };
 
