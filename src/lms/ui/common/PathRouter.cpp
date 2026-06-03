@@ -49,7 +49,6 @@ namespace lms::ui
                 _stack->setCurrentWidget(route.widget);
                 if (route.title)
                     LmsApp->setTitle(*route.title);
-                LmsApp->doJavaScript(LmsApp->javaScriptClass() + ".updateActiveNav('" + route.path + "')");
                 return;
             }
         }

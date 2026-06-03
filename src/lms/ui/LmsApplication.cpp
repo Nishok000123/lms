@@ -170,7 +170,7 @@ namespace lms::ui
                     if (view.title)
                         LmsApp->setTitle(*view.title);
 
-                    LmsApp->doJavaScript(LmsApp->javaScriptClass() + ".updateActiveNav('" + view.path + "')");
+                    LmsApp->doJavaScript(LmsApp->javaScriptClass() + ".updateActiveNav('" + wApp->internalPath() + "')");
                     return;
                 }
             }
