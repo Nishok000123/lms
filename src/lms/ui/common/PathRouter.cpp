@@ -31,6 +31,11 @@ namespace lms::ui
         _stack->setOverflow(Wt::Overflow::Visible);
     }
 
+    void PathRouter::addRoute(std::string_view path, std::optional<Wt::WString> title, Wt::WWidget* widget)
+    {
+        _routes.emplace_back(Route{ std::string{ path }, widget, std::move(title) });
+    }
+
     void PathRouter::activate()
     {
         handlePathChange();
@@ -52,5 +57,6 @@ namespace lms::ui
                 return;
             }
         }
+        _noMatchSignal.emit();
     }
 } // namespace lms::ui

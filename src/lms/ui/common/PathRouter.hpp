@@ -25,6 +25,7 @@
 #include <vector>
 
 #include <Wt/WContainerWidget.h>
+#include <Wt/WSignal.h>
 #include <Wt/WStackedWidget.h>
 #include <Wt/WString.h>
 
@@ -39,9 +40,14 @@ namespace lms::ui
         T* add(std::string_view path, std::optional<Wt::WString> title, Args&&... args)
         {
             T* widget{ _stack->addNew<T>(std::forward<Args>(args)...) };
-            _routes.emplace_back(Route{ std::string{ path }, widget, std::move(title) });
+            addRoute(path, std::move(title), widget);
             return widget;
         }
+
+        void addRoute(std::string_view path, std::optional<Wt::WString> title, Wt::WWidget* widget);
+
+        // Emitted when no registered route matches the current internal path.
+        Wt::Signal<>& noMatch() { return _noMatchSignal; }
 
         // Call once after all routes are registered — performs initial routing and starts listening to path changes.
         void activate();
@@ -50,6 +56,7 @@ namespace lms::ui
         void handlePathChange();
 
         Wt::WStackedWidget* _stack{};
+        Wt::Signal<> _noMatchSignal;
 
         struct Route
         {

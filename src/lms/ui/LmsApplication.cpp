@@ -56,6 +56,7 @@
 #include "admin/About.hpp"
 #include "admin/AdminView.hpp"
 #include "admin/InitWizardView.hpp"
+#include "common/PathRouter.hpp"
 #include "common/Template.hpp"
 #include "explore/Explore.hpp"
 #include "explore/Filters.hpp"
@@ -128,55 +129,6 @@ namespace lms::ui
             return locale;
         }
 
-        enum IdxRoot
-        {
-            IdxExplore = 0,
-            IdxPlayQueue,
-            IdxSettings,
-            IdxAdmin,
-        };
-
-        void handlePathChange(Wt::WStackedWidget& stack, bool isAdmin)
-        {
-            static const struct
-            {
-                std::string path;
-                int index;
-                bool admin;
-                std::optional<Wt::WString> title;
-            } views[] = {
-                { "/artists", IdxExplore, false, Wt::WString::tr("Lms.Explore.artists") },
-                { "/artist", IdxExplore, false, std::nullopt },
-                { "/releases", IdxExplore, false, Wt::WString::tr("Lms.Explore.releases") },
-                { "/release", IdxExplore, false, std::nullopt },
-                { "/tracks", IdxExplore, false, Wt::WString::tr("Lms.Explore.tracks") },
-                { "/tracklists", IdxExplore, false, Wt::WString::tr("Lms.Explore.tracklists") },
-                { "/tracklist", IdxExplore, false, std::nullopt },
-                { "/playqueue", IdxPlayQueue, false, Wt::WString::tr("Lms.PlayQueue.playqueue") },
-                { "/settings", IdxSettings, false, std::nullopt },
-                { "/admin", IdxAdmin, true, std::nullopt },
-            };
-
-            LMS_LOG(UI, DEBUG, "Internal path changed to '" << wApp->internalPath() << "'");
-
-            for (const auto& view : views)
-            {
-                if (wApp->internalPathMatches(view.path))
-                {
-                    if (view.admin && !isAdmin)
-                        break;
-
-                    stack.setCurrentIndex(view.index);
-                    if (view.title)
-                        LmsApp->setTitle(*view.title);
-
-                    LmsApp->doJavaScript(LmsApp->javaScriptClass() + ".updateActiveNav('" + wApp->internalPath() + "')");
-                    return;
-                }
-            }
-
-            wApp->setInternalPath(defaultPath, true);
-        }
     } // namespace
 
     std::unique_ptr<Wt::WApplication> LmsApplication::create(const Wt::WEnvironment& env, db::IDb& db, LmsApplicationManager& appManager, AuthenticationBackend authBackend)
@@ -490,19 +442,22 @@ namespace lms::ui
             }
         }
 
-        // Contents
-        // Order is important in mainStack, see IdxRoot!
-        Wt::WStackedWidget* mainStack{ main->bindNew<Wt::WStackedWidget>("contents") };
-        mainStack->setOverflow(Wt::Overflow::Visible); // wt makes it hidden by default
+        PathRouter* mainRouter{ main->bindNew<PathRouter>("contents") };
 
-        std::unique_ptr<PlayQueue> playQueue{ std::make_unique<PlayQueue>() };
-        Explore* explore{ mainStack->addNew<Explore>(*filters, *playQueue) };
-        _playQueue = mainStack->addWidget(std::move(playQueue));
-        mainStack->addNew<SettingsView>();
+        _playQueue = mainRouter->add<PlayQueue>("/playqueue", Wt::WString::tr("Lms.PlayQueue.playqueue"));
 
-        // Admin stuff
+        Explore* explore{ mainRouter->add<Explore>("/artists", Wt::WString::tr("Lms.Explore.artists"), *filters, *_playQueue) };
+        mainRouter->addRoute("/artist", std::nullopt, explore);
+        mainRouter->addRoute("/releases", Wt::WString::tr("Lms.Explore.releases"), explore);
+        mainRouter->addRoute("/release", std::nullopt, explore);
+        mainRouter->addRoute("/tracks", Wt::WString::tr("Lms.Explore.tracks"), explore);
+        mainRouter->addRoute("/tracklists", Wt::WString::tr("Lms.Explore.tracklists"), explore);
+        mainRouter->addRoute("/tracklist", std::nullopt, explore);
+
+        mainRouter->add<SettingsView>("/settings", std::nullopt);
+
         if (getUserType() == db::UserType::ADMIN)
-            mainStack->addNew<AdminView>();
+            mainRouter->add<AdminView>("/admin", std::nullopt);
 
         explore->getPlayQueueController().setMaxTrackCountToEnqueue(_playQueue->getCapacity());
 
@@ -560,11 +515,16 @@ namespace lms::ui
             });
         }
 
-        internalPathChanged().connect(mainStack, [=] {
-            handlePathChange(*mainStack, isAdmin);
+        internalPathChanged().connect([this] {
+            LMS_LOG(UI, DEBUG, "Internal path changed to '" << wApp->internalPath() << "'");
+            doJavaScript(javaScriptClass() + ".updateActiveNav('" + wApp->internalPath() + "')");
         });
 
-        handlePathChange(*mainStack, isAdmin);
+        mainRouter->noMatch().connect([] {
+            wApp->setInternalPath(defaultPath, true);
+        });
+
+        mainRouter->activate();
     }
 
     void LmsApplication::notify(const Wt::WEvent& event)
