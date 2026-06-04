@@ -86,7 +86,9 @@ namespace lms::recommendation
         std::vector<ReducedVector> _vectors;
         std::unordered_map<db::TrackId, const ReducedVector*> _trackVectors;
         std::unordered_map<db::ReleaseId, std::vector<std::reference_wrapper<const ReducedVector>>> _releaseVectors;
+        std::unordered_map<db::ReleaseId, const ReducedVector*> _releaseMedoids;
         std::unordered_map<db::ArtistId, std::vector<std::reference_wrapper<const ReducedVector>>> _artistVectors;
+        std::unordered_map<db::ArtistId, const ReducedVector*> _artistMedoids;
         TrackMetadataMap _trackMetadata;
 
         FloatType _trackDistanceThreshold{};

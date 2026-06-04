@@ -182,7 +182,7 @@ namespace lms::recommendation
         if (medoidCalculator.empty())
             return res;
 
-        const ReducedVector queryVector{ medoidCalculator.finalize() };
+        const ReducedVector& queryVector{ *medoidCalculator.finalize() };
         const math::NormalizedCosineDistance distFunc{ queryVector };
 
         using Distance = float;
@@ -356,9 +356,7 @@ namespace lms::recommendation
     }
 
     template<AudioVectorProvider Provider, std::size_t ReducedDimCount>
-    ReleaseResults AudioSimilarityEngine<Provider, ReducedDimCount>::findSimilarReleases(
-        db::ReleaseId releaseId,
-        std::size_t maxCount) const
+    ReleaseResults AudioSimilarityEngine<Provider, ReducedDimCount>::findSimilarReleases(db::ReleaseId releaseId, std::size_t maxCount) const
     {
         LMS_SCOPED_TRACE_DETAILED("AudioSimilarityEngine", "Find similar releases");
 
@@ -373,26 +371,37 @@ namespace lms::recommendation
         const auto& queryReleaseFeatures{ itQueryRelease->second };
 
         using Distance = float;
-        std::vector<std::pair<db::ReleaseId, Distance>> rankedReleases;
-        rankedReleases.reserve(_releaseVectors.size());
-
         using CosineDistance = math::NormalizedCosineDistance<ReducedVector::getSize(), FloatType>;
 
-        for (const auto& [candidateId, candidateReleaseVectors] : _releaseVectors)
-        {
-            if (candidateId == releaseId || candidateReleaseVectors.empty())
-                continue;
+        // Stage 1: fast medoid scan to get top candidates
+        constexpr std::size_t preFilterMultiplier{ 10 };
+        constexpr std::size_t preFilterMinCount{ 50 };
+        const std::size_t preFilterCount{ std::min(_releaseMedoids.size() - 1, std::max(preFilterMinCount, maxCount * preFilterMultiplier)) };
 
-            const FloatType distance{ math::symmetricalChamferDistance<CosineDistance>(
-                queryReleaseFeatures,
-                candidateReleaseVectors) };
+        const math::NormalizedCosineDistance queryMedoidDist{ *_releaseMedoids.at(releaseId) };
+        std::vector<std::pair<db::ReleaseId, FloatType>> medoidCandidates;
+        medoidCandidates.reserve(_releaseMedoids.size());
+        for (const auto& [candidateId, medoid] : _releaseMedoids)
+        {
+            if (candidateId != releaseId)
+                medoidCandidates.emplace_back(candidateId, queryMedoidDist(*medoid));
+        }
+        std::nth_element(medoidCandidates.begin(), std::next(medoidCandidates.begin(), preFilterCount), medoidCandidates.end(), [](const auto& a, const auto& b) { return a.second < b.second; });
+        medoidCandidates.resize(preFilterCount);
+
+        // Stage 2: Chamfer re-rank on top candidates
+        std::vector<std::pair<db::ReleaseId, Distance>> rankedReleases;
+        rankedReleases.reserve(preFilterCount);
+        for (const auto& [candidateId, _] : medoidCandidates)
+        {
+            const FloatType distance{ math::symmetricalChamferDistance<CosineDistance>(queryReleaseFeatures, _releaseVectors.at(candidateId)) };
 
             if (distance <= _releaseDistanceThreshold)
                 rankedReleases.emplace_back(candidateId, distance);
         }
 
         const std::size_t resultCount{ std::min(maxCount, rankedReleases.size()) };
-        std::partial_sort(std::begin(rankedReleases), std::next(std::begin(rankedReleases), resultCount), std::end(rankedReleases), [](const auto& lhs, const auto& rhs) {
+        std::partial_sort(std::begin(rankedReleases), std::next(std::begin(rankedReleases), static_cast<std::ptrdiff_t>(resultCount)), std::end(rankedReleases), [](const auto& lhs, const auto& rhs) {
             return lhs.second < rhs.second;
         });
 
@@ -422,19 +431,30 @@ namespace lms::recommendation
         const auto& queryArtistFeatures{ itQueryArtist->second };
 
         using Distance = float;
-        std::vector<std::pair<db::ArtistId, Distance>> rankedArtists;
-        rankedArtists.reserve(_artistVectors.size());
-
         using CosineDistance = math::NormalizedCosineDistance<ReducedVector::getSize(), typename ReducedVector::value_type>;
 
-        for (const auto& [candidateId, candidateArtistFeatures] : _artistVectors)
-        {
-            if (candidateId == artistId || candidateArtistFeatures.empty())
-                continue;
+        // Stage 1: fast medoid scan to get top-K candidates
+        constexpr std::size_t preFilterMultiplier{ 10 };
+        constexpr std::size_t preFilterMinCount{ 50 };
+        const std::size_t preFilterCount{ std::min(_artistMedoids.size() - 1, std::max(preFilterMinCount, maxCount * preFilterMultiplier)) };
 
-            const FloatType distance{ math::symmetricalChamferDistance<CosineDistance>(
-                queryArtistFeatures,
-                candidateArtistFeatures) };
+        const math::NormalizedCosineDistance queryMedoidDist{ *_artistMedoids.at(artistId) };
+        std::vector<std::pair<db::ArtistId, FloatType>> medoidCandidates;
+        medoidCandidates.reserve(_artistMedoids.size());
+        for (const auto& [candidateId, medoid] : _artistMedoids)
+        {
+            if (candidateId != artistId)
+                medoidCandidates.emplace_back(candidateId, queryMedoidDist(*medoid));
+        }
+        std::nth_element(medoidCandidates.begin(), std::next(medoidCandidates.begin(), preFilterCount), medoidCandidates.end(), [](const auto& a, const auto& b) { return a.second < b.second; });
+        medoidCandidates.resize(preFilterCount);
+
+        // Stage 2: Chamfer re-rank on top-K candidates
+        std::vector<std::pair<db::ArtistId, Distance>> rankedArtists;
+        rankedArtists.reserve(preFilterCount);
+        for (const auto& [candidateId, _] : medoidCandidates)
+        {
+            const FloatType distance{ math::symmetricalChamferDistance<CosineDistance>(queryArtistFeatures, _artistVectors.at(candidateId)) };
 
             if (distance <= _artistDistanceThreshold)
                 rankedArtists.emplace_back(candidateId, distance);
@@ -578,7 +598,9 @@ namespace lms::recommendation
         _vectors.clear();
         _vectors.reserve(_trackCount); // must keep pointers valid
         _releaseVectors.clear();
+        _releaseMedoids.clear();
         _artistVectors.clear();
+        _artistMedoids.clear();
         _trackMetadata.clear();
 
         Provider::visitVectors(session, [&](db::TrackId trackId, const SourceVector& sourceVector) {
@@ -652,6 +674,23 @@ namespace lms::recommendation
                 _artistVectors.try_emplace(artist->getId(), std::move(artistTrackVectors));
         });
 
+        math::MedoidCalculator<ReducedVector> calc;
+        for (const auto& [id, vecs] : _releaseVectors)
+        {
+            calc.clear();
+            for (const auto& v : vecs)
+                calc.add(v.get());
+            _releaseMedoids.try_emplace(id, calc.finalize());
+        }
+
+        for (const auto& [id, vecs] : _artistVectors)
+        {
+            calc.clear();
+            for (const auto& v : vecs)
+                calc.add(v.get());
+            _artistMedoids.try_emplace(id, calc.finalize());
+        }
+
         // Sort artistIds in each TrackMetadata entry for set-intersection in SameArtistConstraint
         for (auto& [trackId, metadata] : _trackMetadata)
             std::sort(metadata.artistIds.begin(), metadata.artistIds.end());
@@ -714,6 +753,7 @@ namespace lms::recommendation
         LMS_SCOPED_TRACE_DETAILED("AudioSimilarityEngine", "ComputeReleaseDistanceThreshold");
 
         constexpr std::size_t maxSampleCount{ 200 };
+        constexpr std::size_t maxCandidateCount{ 1'000 };
         constexpr float stdDevMultiplier{ 2.F };
         using CosineDistance = math::NormalizedCosineDistance<ReducedVector::getSize(), FloatType>;
 
@@ -722,11 +762,18 @@ namespace lms::recommendation
         for (const auto& [id, vecs] : _releaseVectors)
             allProfiles.push_back(&vecs);
 
-        const std::size_t sampleCount{ std::min(allProfiles.size(), maxSampleCount) };
-        LOG(INFO, "computing release distance threshold using " << sampleCount << " samples...");
-
+        // move maxCandidateCount random elements to the front
+        const std::size_t candidateCount{ std::min(allProfiles.size(), maxCandidateCount) };
         std::minstd_rand randomEngine{ 42 };
-        core::random::shuffleContainer(randomEngine, allProfiles);
+        for (std::size_t i{}; i < candidateCount; ++i)
+        {
+            std::uniform_int_distribution<std::size_t> dist{ i, allProfiles.size() - 1 };
+            std::swap(allProfiles[i], allProfiles[dist(randomEngine)]);
+        }
+        allProfiles.resize(candidateCount);
+
+        const std::size_t sampleCount{ std::min(candidateCount, maxSampleCount) };
+        LOG(INFO, "computing release distance threshold using " << sampleCount << " samples on " << candidateCount << " candidates...");
 
         math::StatsAccumulator<FloatType> stats;
         for (std::size_t i{}; i < sampleCount; ++i)
@@ -759,6 +806,7 @@ namespace lms::recommendation
         LMS_SCOPED_TRACE_DETAILED("AudioSimilarityEngine", "ComputeArtistDistanceThreshold");
 
         constexpr std::size_t maxSampleCount{ 200 };
+        constexpr std::size_t maxCandidateCount{ 1'000 };
         constexpr float stdDevMultiplier{ 2.F };
         using CosineDistance = math::NormalizedCosineDistance<ReducedVector::getSize(), FloatType>;
 
@@ -767,11 +815,18 @@ namespace lms::recommendation
         for (const auto& [id, vecs] : _artistVectors)
             allProfiles.push_back(&vecs);
 
-        const std::size_t sampleCount{ std::min(allProfiles.size(), maxSampleCount) };
-        LOG(INFO, "computing artist distance threshold using " << sampleCount << " samples...");
-
+        // move maxCandidateCount random elements to the front
+        const std::size_t candidateCount{ std::min(allProfiles.size(), maxCandidateCount) };
         std::minstd_rand randomEngine{ 42 };
-        core::random::shuffleContainer(randomEngine, allProfiles);
+        for (std::size_t i{}; i < candidateCount; ++i)
+        {
+            std::uniform_int_distribution<std::size_t> dist{ i, allProfiles.size() - 1 };
+            std::swap(allProfiles[i], allProfiles[dist(randomEngine)]);
+        }
+        allProfiles.resize(candidateCount);
+
+        const std::size_t sampleCount{ std::min(candidateCount, maxSampleCount) };
+        LOG(INFO, "computing artist distance threshold using " << sampleCount << " samples on " << candidateCount << " candidates...");
 
         math::StatsAccumulator<FloatType> stats;
         for (std::size_t i{}; i < sampleCount; ++i)

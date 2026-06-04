@@ -40,12 +40,7 @@ namespace lms::math::medoidCalculatorTests
 
         EXPECT_FALSE(calculator.empty());
         EXPECT_EQ(calculator.count(), 1U);
-        EXPECT_EQ(calculator.findMedoidIndex(), 0U);
-
-        const Vector<3, float> result = calculator.finalize();
-        EXPECT_EQ(result[0], 1.0F);
-        EXPECT_EQ(result[1], 2.0F);
-        EXPECT_EQ(result[2], 3.0F);
+        EXPECT_EQ(calculator.finalize(), &vec);
     }
 
     TEST(MedoidCalculator, twoVectors)
@@ -58,9 +53,9 @@ namespace lms::math::medoidCalculatorTests
         calculator.add(v2);
 
         EXPECT_EQ(calculator.count(), 2U);
-        // Both have equal distance to the other, but first one is returned
-        const std::size_t medoidIndex = calculator.findMedoidIndex();
-        EXPECT_TRUE(medoidIndex == 0 || medoidIndex == 1);
+        // Both have equal distance to the other; result must be one of the two
+        const Vector<2, float>* medoid = calculator.finalize();
+        EXPECT_TRUE(medoid == &v1 || medoid == &v2);
     }
 
     TEST(MedoidCalculator, threeDifferentVectors)
@@ -68,16 +63,14 @@ namespace lms::math::medoidCalculatorTests
         MedoidCalculator<Vector<2, float>> calculator;
         // Three points: (0,0), (1,0), (10,0)
         // Medoid should be (1,0) as it's closest to the others
-        calculator.add(Vector<2, float>{ 0.0F, 0.0F });
-        calculator.add(Vector<2, float>{ 1.0F, 0.0F });
-        calculator.add(Vector<2, float>{ 10.0F, 0.0F });
+        const Vector<2, float> v0{ 0.0F, 0.0F };
+        const Vector<2, float> v1{ 1.0F, 0.0F };
+        const Vector<2, float> v2{ 10.0F, 0.0F };
+        calculator.add(v0);
+        calculator.add(v1);
+        calculator.add(v2);
 
-        const std::size_t medoidIndex = calculator.findMedoidIndex();
-        EXPECT_EQ(medoidIndex, 1U); // The middle point (1,0) is the medoid
-
-        const Vector<2, float> result = calculator.finalize();
-        EXPECT_FLOAT_EQ(result[0], 1.0F);
-        EXPECT_FLOAT_EQ(result[1], 0.0F);
+        EXPECT_EQ(calculator.finalize(), &v1);
     }
 
     TEST(MedoidCalculator, computeMedoidSpan)
@@ -94,25 +87,11 @@ namespace lms::math::medoidCalculatorTests
         EXPECT_FLOAT_EQ(result[1], 0.0F);
     }
 
-    TEST(MedoidCalculator, getVector)
-    {
-        MedoidCalculator<Vector<2, float>> calculator;
-        calculator.add(Vector<2, float>{ 1.0F, 2.0F });
-        calculator.add(Vector<2, float>{ 3.0F, 4.0F });
-
-        const Vector<2, float>& v0 = calculator.getVector(0U);
-        const Vector<2, float>& v1 = calculator.getVector(1U);
-
-        EXPECT_FLOAT_EQ(v0[0], 1.0F);
-        EXPECT_FLOAT_EQ(v0[1], 2.0F);
-        EXPECT_FLOAT_EQ(v1[0], 3.0F);
-        EXPECT_FLOAT_EQ(v1[1], 4.0F);
-    }
-
     TEST(MedoidCalculator, clear)
     {
         MedoidCalculator<Vector<2, float>> calculator;
-        calculator.add(Vector<2, float>{ 1.0F, 2.0F });
+        const Vector<2, float> v{ 1.0F, 2.0F };
+        calculator.add(v);
         EXPECT_EQ(calculator.count(), 1);
         calculator.clear();
         EXPECT_EQ(calculator.count(), 0);
