@@ -38,11 +38,10 @@ namespace lms::ui
 
     void PathRouter::activate()
     {
-        handlePathChange();
-
         LmsApp->internalPathChanged().connect(this, [this] {
             handlePathChange();
         });
+        handlePathChange();
     }
 
     void PathRouter::handlePathChange()

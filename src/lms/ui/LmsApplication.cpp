@@ -525,6 +525,7 @@ namespace lms::ui
         });
 
         mainRouter->activate();
+        doJavaScript(javaScriptClass() + ".updateActiveNav('" + wApp->internalPath() + "')");
     }
 
     void LmsApplication::notify(const Wt::WEvent& event)
