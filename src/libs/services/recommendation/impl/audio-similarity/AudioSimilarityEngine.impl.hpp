@@ -49,6 +49,7 @@
 #include "math/PrincipalComponents.hpp"
 #include "math/StatsAccumulator.hpp"
 
+#include "NearDuplicateEmbeddingConstraint.hpp"
 #include "track-selection-constraints/DuplicateTrackConstraint.hpp"
 #include "track-selection-constraints/InterpolationFitConstraint.hpp"
 #include "track-selection-constraints/MaxDistanceConstraint.hpp"
@@ -115,9 +116,11 @@ namespace lms::recommendation
         constexpr float smoothTransitionWeight{ 0.2F };
         constexpr float sameReleaseWeight{ 0.5F };
         constexpr float sameArtistWeight{ 0.5F };
+        constexpr float nearDuplicateThreshold{ 0.01F };
 
         _similarityEvaluator = {};
         _similarityEvaluator.addHardConstraint(std::make_unique<DuplicateTrackConstraint>());
+        _similarityEvaluator.addHardConstraint(std::make_unique<NearDuplicateEmbeddingConstraint<ReducedDimCount>>(_trackVectors, nearDuplicateThreshold));
         _similarityEvaluator.addHardConstraint(std::make_unique<MaxDistanceConstraint>(_trackDistanceThreshold));
         _similarityEvaluator.addSoftConstraint(std::make_unique<InterpolationFitConstraint>(), interpolationFitWeight);
         _similarityEvaluator.addSoftConstraint(std::make_unique<SmoothTransitionConstraint>(), smoothTransitionWeight);
@@ -126,6 +129,7 @@ namespace lms::recommendation
 
         _pathEvaluator = {};
         _pathEvaluator.addHardConstraint(std::make_unique<DuplicateTrackConstraint>());
+        _pathEvaluator.addHardConstraint(std::make_unique<NearDuplicateEmbeddingConstraint<ReducedDimCount>>(_trackVectors, nearDuplicateThreshold));
         _pathEvaluator.addSoftConstraint(std::make_unique<InterpolationFitConstraint>(), interpolationFitWeight);
         _pathEvaluator.addSoftConstraint(std::make_unique<SmoothTransitionConstraint>(), smoothTransitionWeight);
         _pathEvaluator.addSoftConstraint(std::make_unique<SameReleaseConstraint>(_trackMetadata), sameReleaseWeight);
