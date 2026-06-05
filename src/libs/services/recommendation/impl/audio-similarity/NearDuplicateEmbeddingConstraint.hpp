@@ -25,8 +25,8 @@
 #include "math/NormalizedCosineDistance.hpp"
 #include "math/Vector.hpp"
 
-#include "track-selection-constraints/ITrackCandidateHardConstraint.hpp"
 #include "Types.hpp"
+#include "track-selection-constraints/ITrackCandidateHardConstraint.hpp"
 
 namespace lms::recommendation
 {

@@ -4,6 +4,7 @@ add_executable(test-recommendation
 
 target_link_libraries(test-recommendation PRIVATE
 	lmsrecommendation
+	lmsmath
 	GTest::GTest
 	GTest::gtest_main
 	)

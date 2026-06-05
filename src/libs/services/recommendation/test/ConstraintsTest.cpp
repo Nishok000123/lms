@@ -22,7 +22,9 @@
 #include "database/objects/ArtistId.hpp"
 #include "database/objects/ReleaseId.hpp"
 #include "database/objects/TrackId.hpp"
+#include "math/Vector.hpp"
 
+#include "audio-similarity/NearDuplicateEmbeddingConstraint.hpp"
 #include "track-selection-constraints/DuplicateTrackConstraint.hpp"
 #include "track-selection-constraints/SameArtistConstraint.hpp"
 #include "track-selection-constraints/SameReleaseConstraint.hpp"
@@ -237,4 +239,76 @@ TEST(TrackCandidateEvaluator, hardConstraintPassesEvenWithSoftConstraints)
     const TrackCandidateContext ctx{ .candidateTrackId = T1, .selectedTracks = selected };
     EXPECT_FALSE(evaluator.rejects(ctx));
     EXPECT_FLOAT_EQ(evaluator.score(ctx), 1.F);
+}
+
+namespace
+{
+    using TestVec = math::Vector<2, float>;
+    const TestVec v_x{ 1.F, 0.F };
+    const TestVec v_y{ 0.F, 1.F };
+
+    using TestConstraint = NearDuplicateEmbeddingConstraint<2>;
+    using TestVectorMap = TestConstraint::TrackVectorMap;
+} // namespace
+
+TEST(NearDuplicateEmbeddingConstraint, acceptsWhenCandidateNotInMap)
+{
+    const TestVectorMap trackVectors{ { T1, &v_x } };
+    const TestConstraint constraint{ trackVectors, 0.1F };
+    const std::vector<db::TrackId> selected{ T1 };
+    const TrackCandidateContext ctx{ .candidateTrackId = T2, .selectedTracks = selected };
+    EXPECT_FALSE(constraint.rejects(ctx));
+}
+
+TEST(NearDuplicateEmbeddingConstraint, acceptsWhenSelectionEmpty)
+{
+    const TestVectorMap trackVectors{ { T1, &v_x } };
+    const TestConstraint constraint{ trackVectors, 0.1F };
+    const TrackCandidateContext ctx{ .candidateTrackId = T1, .selectedTracks = {} };
+    EXPECT_FALSE(constraint.rejects(ctx));
+}
+
+TEST(NearDuplicateEmbeddingConstraint, acceptsWhenSelectedTrackNotInMap)
+{
+    const TestVectorMap trackVectors{ { T1, &v_x } };
+    const TestConstraint constraint{ trackVectors, 0.1F };
+    const std::vector<db::TrackId> selected{ T2 };
+    const TrackCandidateContext ctx{ .candidateTrackId = T1, .selectedTracks = selected };
+    EXPECT_FALSE(constraint.rejects(ctx));
+}
+
+TEST(NearDuplicateEmbeddingConstraint, rejectsWhenDistanceBelowThreshold)
+{
+    const TestVectorMap trackVectors{ { T1, &v_x }, { T2, &v_x } };
+    const TestConstraint constraint{ trackVectors, 0.1F };
+    const std::vector<db::TrackId> selected{ T2 };
+    const TrackCandidateContext ctx{ .candidateTrackId = T1, .selectedTracks = selected };
+    EXPECT_TRUE(constraint.rejects(ctx));
+}
+
+TEST(NearDuplicateEmbeddingConstraint, acceptsWhenDistanceAboveThreshold)
+{
+    const TestVectorMap trackVectors{ { T1, &v_x }, { T2, &v_y } };
+    const TestConstraint constraint{ trackVectors, 0.1F };
+    const std::vector<db::TrackId> selected{ T2 };
+    const TrackCandidateContext ctx{ .candidateTrackId = T1, .selectedTracks = selected };
+    EXPECT_FALSE(constraint.rejects(ctx));
+}
+
+TEST(NearDuplicateEmbeddingConstraint, rejectsWhenOneOfManySelectedIsNearDuplicate)
+{
+    const TestVectorMap trackVectors{ { T1, &v_x }, { T3, &v_y }, { T4, &v_x } };
+    const TestConstraint constraint{ trackVectors, 0.1F };
+    const std::vector<db::TrackId> selected{ T3, T4 };
+    const TrackCandidateContext ctx{ .candidateTrackId = T1, .selectedTracks = selected };
+    EXPECT_TRUE(constraint.rejects(ctx));
+}
+
+TEST(NearDuplicateEmbeddingConstraint, acceptsWhenAllSelectedAreFarEnough)
+{
+    const TestVectorMap trackVectors{ { T1, &v_x }, { T2, &v_y }, { T3, &v_y } };
+    const TestConstraint constraint{ trackVectors, 0.1F };
+    const std::vector<db::TrackId> selected{ T2, T3 };
+    const TrackCandidateContext ctx{ .candidateTrackId = T1, .selectedTracks = selected };
+    EXPECT_FALSE(constraint.rejects(ctx));
 }
