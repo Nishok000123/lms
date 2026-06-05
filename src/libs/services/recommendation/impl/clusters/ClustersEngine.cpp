@@ -278,6 +278,7 @@ namespace lms::recommendation
                 const TrackCandidateContext context{
                     .candidateTrackId = candidates[i],
                     .selectedTracks = selectedTracks,
+                    .seedTrackIds = {},
                 };
 
                 if (_trackEvaluator.rejects(context))

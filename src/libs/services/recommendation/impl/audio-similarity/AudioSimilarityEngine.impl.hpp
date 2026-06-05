@@ -49,13 +49,13 @@
 #include "math/PrincipalComponents.hpp"
 #include "math/StatsAccumulator.hpp"
 
+#include "InterpolationFitConstraint.hpp"
+#include "MaxDistanceConstraint.hpp"
 #include "NearDuplicateEmbeddingConstraint.hpp"
+#include "SmoothTransitionConstraint.hpp"
 #include "track-selection-constraints/DuplicateTrackConstraint.hpp"
-#include "track-selection-constraints/InterpolationFitConstraint.hpp"
-#include "track-selection-constraints/MaxDistanceConstraint.hpp"
 #include "track-selection-constraints/SameArtistConstraint.hpp"
 #include "track-selection-constraints/SameReleaseConstraint.hpp"
-#include "track-selection-constraints/SmoothTransitionConstraint.hpp"
 
 #include "Types.hpp"
 
@@ -121,17 +121,17 @@ namespace lms::recommendation
         _similarityEvaluator = {};
         _similarityEvaluator.addHardConstraint(std::make_unique<DuplicateTrackConstraint>());
         _similarityEvaluator.addHardConstraint(std::make_unique<NearDuplicateEmbeddingConstraint<ReducedDimCount>>(_trackVectors, nearDuplicateThreshold));
-        _similarityEvaluator.addHardConstraint(std::make_unique<MaxDistanceConstraint>(_trackDistanceThreshold));
-        _similarityEvaluator.addSoftConstraint(std::make_unique<InterpolationFitConstraint>(), interpolationFitWeight);
-        _similarityEvaluator.addSoftConstraint(std::make_unique<SmoothTransitionConstraint>(), smoothTransitionWeight);
+        _similarityEvaluator.addHardConstraint(std::make_unique<MaxDistanceConstraint<ReducedDimCount>>(_trackVectors, _trackDistanceThreshold));
+        _similarityEvaluator.addSoftConstraint(std::make_unique<InterpolationFitConstraint<ReducedDimCount>>(_trackVectors), interpolationFitWeight);
+        _similarityEvaluator.addSoftConstraint(std::make_unique<SmoothTransitionConstraint<ReducedDimCount>>(_trackVectors), smoothTransitionWeight);
         _similarityEvaluator.addSoftConstraint(std::make_unique<SameReleaseConstraint>(_trackMetadata), sameReleaseWeight);
         _similarityEvaluator.addSoftConstraint(std::make_unique<SameArtistConstraint>(_trackMetadata), sameArtistWeight);
 
         _pathEvaluator = {};
         _pathEvaluator.addHardConstraint(std::make_unique<DuplicateTrackConstraint>());
         _pathEvaluator.addHardConstraint(std::make_unique<NearDuplicateEmbeddingConstraint<ReducedDimCount>>(_trackVectors, nearDuplicateThreshold));
-        _pathEvaluator.addSoftConstraint(std::make_unique<InterpolationFitConstraint>(), interpolationFitWeight);
-        _pathEvaluator.addSoftConstraint(std::make_unique<SmoothTransitionConstraint>(), smoothTransitionWeight);
+        _pathEvaluator.addSoftConstraint(std::make_unique<InterpolationFitConstraint<ReducedDimCount>>(_trackVectors), interpolationFitWeight);
+        _pathEvaluator.addSoftConstraint(std::make_unique<SmoothTransitionConstraint<ReducedDimCount>>(_trackVectors), smoothTransitionWeight);
         _pathEvaluator.addSoftConstraint(std::make_unique<SameReleaseConstraint>(_trackMetadata), sameReleaseWeight);
         _pathEvaluator.addSoftConstraint(std::make_unique<SameArtistConstraint>(_trackMetadata), sameArtistWeight);
     }
@@ -210,16 +210,12 @@ namespace lms::recommendation
         rankedTracks.resize(candidateCount);
 
         // Greedy selection: at each step pick the candidate with the lowest penalized score.
-        // distanceToPrevious is the cosine distance to the last selected track, so that
-        // SmoothTransitionConstraint penalises large acoustic jumps between consecutive results.
         // Pre-seed selectedTracks with the input tracks so that soft constraints (same release,
         // same artist) treat them as already taken, preventing the first results from being
         // from the same release/artist as the inputs.
         std::vector<db::TrackId> selectedTracks(std::cbegin(tracksId), std::cend(tracksId));
         selectedTracks.reserve(selectedTracks.size() + maxCount);
         res.reserve(maxCount);
-
-        const ReducedVector* previousVector{};
 
         while (res.size() < maxCount && !rankedTracks.empty())
         {
@@ -228,15 +224,12 @@ namespace lms::recommendation
 
             for (std::size_t i{}; i < rankedTracks.size(); ++i)
             {
-                const auto& [candidateId, distanceToQuery]{ rankedTracks[i] };
-                const ReducedVector* candidateVector{ _trackVectors.at(candidateId) };
-                const float distanceToPrevious{ previousVector ? math::NormalizedCosineDistance{ *previousVector }(*candidateVector) : 0.F };
+                const db::TrackId candidateId{ rankedTracks[i].first };
 
                 const TrackCandidateContext context{
                     .candidateTrackId = candidateId,
                     .selectedTracks = selectedTracks,
-                    .distanceToQuery = distanceToQuery,
-                    .distanceToPrevious = distanceToPrevious,
+                    .seedTrackIds = tracksId,
                 };
 
                 if (_similarityEvaluator.rejects(context))
@@ -256,7 +249,6 @@ namespace lms::recommendation
             const auto& [selectedId, distanceToQuery]{ rankedTracks[*bestIdx] };
             res.push_back({ .id = selectedId, .distance = distanceToQuery });
             selectedTracks.push_back(selectedId);
-            previousVector = _trackVectors.at(selectedId);
             rankedTracks.erase(std::begin(rankedTracks) + static_cast<std::ptrdiff_t>(*bestIdx));
         }
 
@@ -284,26 +276,28 @@ namespace lms::recommendation
         path.reserve(maxCount);
         path.push_back(startTrackId);
 
-        const ReducedVector* previousVector{ itStart->second };
-        static constexpr std::size_t DefaultNeighborCount{ 16 };
-        static constexpr std::size_t BroadNeighborCount{ 64 };
-        std::size_t neighborCount{ DefaultNeighborCount };
+        static constexpr std::size_t NeighborCount{ 32 };
         const std::size_t interiorCount{ (maxCount > 2) ? (maxCount - 2) : 0 };
 
-        auto evaluateCandidates = [&](const TrackResults& neighborList) -> std::optional<db::TrackId> {
+        for (std::size_t i{}; i < interiorCount; ++i)
+        {
+            const float t{ static_cast<float>(i + 1) / static_cast<float>(interiorCount + 1) };
+            auto queryPoint{ startVector + direction * t };
+            queryPoint.normalizeL2();
+
+            const auto neighbors{ detail::findNearestNeighbors(queryPoint, _trackVectors, NeighborCount, endTrackId) };
+            const db::TrackId stepSeedTrackId{ neighbors.empty() ? startTrackId : neighbors[0].id };
+            const std::array<db::TrackId, 1> stepSeedTrackIds{ stepSeedTrackId };
+
             std::optional<db::TrackId> best;
             float bestScore{ std::numeric_limits<float>::max() };
 
-            for (const auto& [candidateId, candidateDistance] : neighborList)
+            for (const auto& [candidateTrackId, candidateDistance] : neighbors)
             {
-                const auto* candidateVector{ _trackVectors.at(candidateId) };
-                const float transitionDistance{ math::NormalizedCosineDistance{ *previousVector }(*candidateVector) };
-
                 const TrackCandidateContext context{
-                    .candidateTrackId = candidateId,
+                    .candidateTrackId = candidateTrackId,
                     .selectedTracks = path,
-                    .distanceToQuery = candidateDistance,
-                    .distanceToPrevious = transitionDistance,
+                    .seedTrackIds = stepSeedTrackIds,
                 };
 
                 if (_pathEvaluator.rejects(context))
@@ -313,34 +307,14 @@ namespace lms::recommendation
                 if (score < bestScore)
                 {
                     bestScore = score;
-                    best = candidateId;
+                    best = candidateTrackId;
                 }
             }
 
-            return best;
-        };
-
-        for (std::size_t i{}; i < interiorCount; ++i)
-        {
-            const float t{ static_cast<float>(i + 1) / static_cast<float>(interiorCount + 1) };
-            auto queryPoint{ startVector + direction * t };
-            queryPoint.normalizeL2();
-
-            const auto neighbors{ detail::findNearestNeighbors(queryPoint, _trackVectors, neighborCount, endTrackId) };
-            std::optional<db::TrackId> bestCandidate{ evaluateCandidates(neighbors) };
-
-            if (!bestCandidate && neighborCount < BroadNeighborCount)
-            {
-                neighborCount = BroadNeighborCount;
-                const auto broaderNeighbors{ detail::findNearestNeighbors(queryPoint, _trackVectors, neighborCount, endTrackId) };
-                bestCandidate = evaluateCandidates(broaderNeighbors);
-            }
-
-            if (!bestCandidate)
+            if (!best)
                 continue;
 
-            path.push_back(*bestCandidate);
-            previousVector = _trackVectors.at(*bestCandidate);
+            path.push_back(*best);
         }
 
         if (maxCount > 1)

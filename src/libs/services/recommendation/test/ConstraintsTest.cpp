@@ -24,7 +24,10 @@
 #include "database/objects/TrackId.hpp"
 #include "math/Vector.hpp"
 
+#include "audio-similarity/InterpolationFitConstraint.hpp"
+#include "audio-similarity/MaxDistanceConstraint.hpp"
 #include "audio-similarity/NearDuplicateEmbeddingConstraint.hpp"
+#include "audio-similarity/SmoothTransitionConstraint.hpp"
 #include "track-selection-constraints/DuplicateTrackConstraint.hpp"
 #include "track-selection-constraints/SameArtistConstraint.hpp"
 #include "track-selection-constraints/SameReleaseConstraint.hpp"
@@ -41,7 +44,6 @@ namespace
     const db::TrackId T2{ 2 };
     const db::TrackId T3{ 3 };
     const db::TrackId T4{ 4 };
-    const db::TrackId T5{ 5 };
 
     const db::ArtistId A1{ 10 };
     const db::ArtistId A2{ 20 };
@@ -53,20 +55,20 @@ namespace
 TEST(DuplicateTrackConstraint, acceptsNewCandidate)
 {
     const std::vector<db::TrackId> selected{ T1, T2 };
-    const TrackCandidateContext ctx{ .candidateTrackId = T3, .selectedTracks = selected };
+    const TrackCandidateContext ctx{ .candidateTrackId = T3, .selectedTracks = selected, .seedTrackIds = {} };
     EXPECT_FALSE(DuplicateTrackConstraint{}.rejects(ctx));
 }
 
 TEST(DuplicateTrackConstraint, rejectsAlreadySelected)
 {
     const std::vector<db::TrackId> selected{ T1, T2, T3 };
-    const TrackCandidateContext ctx{ .candidateTrackId = T2, .selectedTracks = selected };
+    const TrackCandidateContext ctx{ .candidateTrackId = T2, .selectedTracks = selected, .seedTrackIds = {} };
     EXPECT_TRUE(DuplicateTrackConstraint{}.rejects(ctx));
 }
 
 TEST(DuplicateTrackConstraint, acceptsWhenSelectionEmpty)
 {
-    const TrackCandidateContext ctx{ .candidateTrackId = T1, .selectedTracks = {} };
+    const TrackCandidateContext ctx{ .candidateTrackId = T1, .selectedTracks = {}, .seedTrackIds = {} };
     EXPECT_FALSE(DuplicateTrackConstraint{}.rejects(ctx));
 }
 
@@ -78,7 +80,7 @@ TEST(SameArtistConstraint, zeroScoreWhenNoSharedArtist)
     };
     const SameArtistConstraint constraint{ meta };
     const std::vector<db::TrackId> selected{ T2 };
-    const TrackCandidateContext ctx{ .candidateTrackId = T1, .selectedTracks = selected };
+    const TrackCandidateContext ctx{ .candidateTrackId = T1, .selectedTracks = selected, .seedTrackIds = {} };
     EXPECT_FLOAT_EQ(constraint.computeScore(ctx), 0.F);
 }
 
@@ -90,7 +92,7 @@ TEST(SameArtistConstraint, fullScoreWhenMostRecentMatchesArtist)
     };
     const SameArtistConstraint constraint{ meta };
     const std::vector<db::TrackId> selected{ T2 };
-    const TrackCandidateContext ctx{ .candidateTrackId = T1, .selectedTracks = selected };
+    const TrackCandidateContext ctx{ .candidateTrackId = T1, .selectedTracks = selected, .seedTrackIds = {} };
 
     EXPECT_FLOAT_EQ(constraint.computeScore(ctx), 1.F);
 }
@@ -105,7 +107,7 @@ TEST(SameArtistConstraint, halfScoreWhenSecondMostRecentMatchesArtist)
     const SameArtistConstraint constraint{ meta };
 
     const std::vector<db::TrackId> selected{ T3, T2 };
-    const TrackCandidateContext ctx{ .candidateTrackId = T1, .selectedTracks = selected };
+    const TrackCandidateContext ctx{ .candidateTrackId = T1, .selectedTracks = selected, .seedTrackIds = {} };
 
     EXPECT_FLOAT_EQ(constraint.computeScore(ctx), 0.5F);
 }
@@ -115,21 +117,13 @@ TEST(SameArtistConstraint, trackOutsideWindowIsIgnored)
     TrackMetadataMap meta{
         { T1, { .releaseId = {}, .artistIds = { A1 } } },
         { T2, { .releaseId = {}, .artistIds = { A2 } } },
-        { T3, { .releaseId = {}, .artistIds = { A2 } } },
-        { T4, { .releaseId = {}, .artistIds = { A2 } } },
-        { T5, { .releaseId = {}, .artistIds = { A1 } } }, // outside window=4
-    };
-    const SameArtistConstraint constraint{ meta, /*window=*/4 };
-    TrackMetadataMap meta2{
-        { T1, { .releaseId = {}, .artistIds = { A1 } } },
-        { T2, { .releaseId = {}, .artistIds = { A2 } } },
         { T3, { .releaseId = {}, .artistIds = { A1 } } },
     };
-    const SameArtistConstraint constraint2{ meta2, /*window=*/1 };
+    const SameArtistConstraint constraint{ meta, /*window=*/1 };
 
     const std::vector<db::TrackId> selected{ T3, T2 };
-    const TrackCandidateContext ctx{ .candidateTrackId = T1, .selectedTracks = selected };
-    EXPECT_FLOAT_EQ(constraint2.computeScore(ctx), 0.F);
+    const TrackCandidateContext ctx{ .candidateTrackId = T1, .selectedTracks = selected, .seedTrackIds = {} };
+    EXPECT_FLOAT_EQ(constraint.computeScore(ctx), 0.F);
 }
 
 TEST(SameArtistConstraint, zeroScoreWhenCandidateNotInMap)
@@ -137,7 +131,7 @@ TEST(SameArtistConstraint, zeroScoreWhenCandidateNotInMap)
     const TrackMetadataMap meta{};
     const SameArtistConstraint constraint{ meta };
     const std::vector<db::TrackId> selected{ T2 };
-    const TrackCandidateContext ctx{ .candidateTrackId = T1, .selectedTracks = selected };
+    const TrackCandidateContext ctx{ .candidateTrackId = T1, .selectedTracks = selected, .seedTrackIds = {} };
     EXPECT_FLOAT_EQ(constraint.computeScore(ctx), 0.F);
 }
 
@@ -149,7 +143,7 @@ TEST(SameReleaseConstraint, zeroScoreWhenNoSharedRelease)
     };
     const SameReleaseConstraint constraint{ meta };
     const std::vector<db::TrackId> selected{ T2 };
-    const TrackCandidateContext ctx{ .candidateTrackId = T1, .selectedTracks = selected };
+    const TrackCandidateContext ctx{ .candidateTrackId = T1, .selectedTracks = selected, .seedTrackIds = {} };
     EXPECT_FLOAT_EQ(constraint.computeScore(ctx), 0.F);
 }
 
@@ -161,7 +155,7 @@ TEST(SameReleaseConstraint, fullScoreWhenMostRecentMatchesRelease)
     };
     const SameReleaseConstraint constraint{ meta };
     const std::vector<db::TrackId> selected{ T2 };
-    const TrackCandidateContext ctx{ .candidateTrackId = T1, .selectedTracks = selected };
+    const TrackCandidateContext ctx{ .candidateTrackId = T1, .selectedTracks = selected, .seedTrackIds = {} };
     EXPECT_FLOAT_EQ(constraint.computeScore(ctx), 1.F);
 }
 
@@ -173,7 +167,7 @@ TEST(SameReleaseConstraint, zeroScoreWhenCandidateHasNoRelease)
     };
     const SameReleaseConstraint constraint{ meta };
     const std::vector<db::TrackId> selected{ T2 };
-    const TrackCandidateContext ctx{ .candidateTrackId = T1, .selectedTracks = selected };
+    const TrackCandidateContext ctx{ .candidateTrackId = T1, .selectedTracks = selected, .seedTrackIds = {} };
     EXPECT_FLOAT_EQ(constraint.computeScore(ctx), 0.F);
 }
 
@@ -183,14 +177,14 @@ TEST(TrackCandidateEvaluator, hardConstraintRejects)
     evaluator.addHardConstraint(std::make_unique<DuplicateTrackConstraint>());
 
     const std::vector<db::TrackId> selected{ T1 };
-    const TrackCandidateContext ctx{ .candidateTrackId = T1, .selectedTracks = selected };
+    const TrackCandidateContext ctx{ .candidateTrackId = T1, .selectedTracks = selected, .seedTrackIds = {} };
     EXPECT_TRUE(evaluator.rejects(ctx));
 }
 
 TEST(TrackCandidateEvaluator, noHardConstraintDoesNotReject)
 {
     TrackCandidateEvaluator evaluator;
-    const TrackCandidateContext ctx{ .candidateTrackId = T1, .selectedTracks = {} };
+    const TrackCandidateContext ctx{ .candidateTrackId = T1, .selectedTracks = {}, .seedTrackIds = {} };
     EXPECT_FALSE(evaluator.rejects(ctx));
 }
 
@@ -204,7 +198,7 @@ TEST(TrackCandidateEvaluator, softConstraintScoreIsWeighted)
     evaluator.addSoftConstraint(std::make_unique<SameReleaseConstraint>(meta), 2.F);
 
     const std::vector<db::TrackId> selected{ T2 };
-    const TrackCandidateContext ctx{ .candidateTrackId = T1, .selectedTracks = selected };
+    const TrackCandidateContext ctx{ .candidateTrackId = T1, .selectedTracks = selected, .seedTrackIds = {} };
 
     EXPECT_FLOAT_EQ(evaluator.score(ctx), 2.F);
 }
@@ -220,7 +214,7 @@ TEST(TrackCandidateEvaluator, multipleSoftConstraintsAreAccumulated)
     evaluator.addSoftConstraint(std::make_unique<SameArtistConstraint>(meta), 1.F);
 
     const std::vector<db::TrackId> selected{ T2 };
-    const TrackCandidateContext ctx{ .candidateTrackId = T1, .selectedTracks = selected };
+    const TrackCandidateContext ctx{ .candidateTrackId = T1, .selectedTracks = selected, .seedTrackIds = {} };
 
     EXPECT_FLOAT_EQ(evaluator.score(ctx), 2.F);
 }
@@ -236,7 +230,7 @@ TEST(TrackCandidateEvaluator, hardConstraintPassesEvenWithSoftConstraints)
     evaluator.addSoftConstraint(std::make_unique<SameReleaseConstraint>(meta), 1.F);
 
     const std::vector<db::TrackId> selected{ T2 };
-    const TrackCandidateContext ctx{ .candidateTrackId = T1, .selectedTracks = selected };
+    const TrackCandidateContext ctx{ .candidateTrackId = T1, .selectedTracks = selected, .seedTrackIds = {} };
     EXPECT_FALSE(evaluator.rejects(ctx));
     EXPECT_FLOAT_EQ(evaluator.score(ctx), 1.F);
 }
@@ -256,7 +250,7 @@ TEST(NearDuplicateEmbeddingConstraint, acceptsWhenCandidateNotInMap)
     const TestVectorMap trackVectors{ { T1, &v_x } };
     const TestConstraint constraint{ trackVectors, 0.1F };
     const std::vector<db::TrackId> selected{ T1 };
-    const TrackCandidateContext ctx{ .candidateTrackId = T2, .selectedTracks = selected };
+    const TrackCandidateContext ctx{ .candidateTrackId = T2, .selectedTracks = selected, .seedTrackIds = {} };
     EXPECT_FALSE(constraint.rejects(ctx));
 }
 
@@ -264,7 +258,7 @@ TEST(NearDuplicateEmbeddingConstraint, acceptsWhenSelectionEmpty)
 {
     const TestVectorMap trackVectors{ { T1, &v_x } };
     const TestConstraint constraint{ trackVectors, 0.1F };
-    const TrackCandidateContext ctx{ .candidateTrackId = T1, .selectedTracks = {} };
+    const TrackCandidateContext ctx{ .candidateTrackId = T1, .selectedTracks = {}, .seedTrackIds = {} };
     EXPECT_FALSE(constraint.rejects(ctx));
 }
 
@@ -273,7 +267,7 @@ TEST(NearDuplicateEmbeddingConstraint, acceptsWhenSelectedTrackNotInMap)
     const TestVectorMap trackVectors{ { T1, &v_x } };
     const TestConstraint constraint{ trackVectors, 0.1F };
     const std::vector<db::TrackId> selected{ T2 };
-    const TrackCandidateContext ctx{ .candidateTrackId = T1, .selectedTracks = selected };
+    const TrackCandidateContext ctx{ .candidateTrackId = T1, .selectedTracks = selected, .seedTrackIds = {} };
     EXPECT_FALSE(constraint.rejects(ctx));
 }
 
@@ -282,7 +276,7 @@ TEST(NearDuplicateEmbeddingConstraint, rejectsWhenDistanceBelowThreshold)
     const TestVectorMap trackVectors{ { T1, &v_x }, { T2, &v_x } };
     const TestConstraint constraint{ trackVectors, 0.1F };
     const std::vector<db::TrackId> selected{ T2 };
-    const TrackCandidateContext ctx{ .candidateTrackId = T1, .selectedTracks = selected };
+    const TrackCandidateContext ctx{ .candidateTrackId = T1, .selectedTracks = selected, .seedTrackIds = {} };
     EXPECT_TRUE(constraint.rejects(ctx));
 }
 
@@ -291,7 +285,7 @@ TEST(NearDuplicateEmbeddingConstraint, acceptsWhenDistanceAboveThreshold)
     const TestVectorMap trackVectors{ { T1, &v_x }, { T2, &v_y } };
     const TestConstraint constraint{ trackVectors, 0.1F };
     const std::vector<db::TrackId> selected{ T2 };
-    const TrackCandidateContext ctx{ .candidateTrackId = T1, .selectedTracks = selected };
+    const TrackCandidateContext ctx{ .candidateTrackId = T1, .selectedTracks = selected, .seedTrackIds = {} };
     EXPECT_FALSE(constraint.rejects(ctx));
 }
 
@@ -300,7 +294,7 @@ TEST(NearDuplicateEmbeddingConstraint, rejectsWhenOneOfManySelectedIsNearDuplica
     const TestVectorMap trackVectors{ { T1, &v_x }, { T3, &v_y }, { T4, &v_x } };
     const TestConstraint constraint{ trackVectors, 0.1F };
     const std::vector<db::TrackId> selected{ T3, T4 };
-    const TrackCandidateContext ctx{ .candidateTrackId = T1, .selectedTracks = selected };
+    const TrackCandidateContext ctx{ .candidateTrackId = T1, .selectedTracks = selected, .seedTrackIds = {} };
     EXPECT_TRUE(constraint.rejects(ctx));
 }
 
@@ -309,6 +303,111 @@ TEST(NearDuplicateEmbeddingConstraint, acceptsWhenAllSelectedAreFarEnough)
     const TestVectorMap trackVectors{ { T1, &v_x }, { T2, &v_y }, { T3, &v_y } };
     const TestConstraint constraint{ trackVectors, 0.1F };
     const std::vector<db::TrackId> selected{ T2, T3 };
-    const TrackCandidateContext ctx{ .candidateTrackId = T1, .selectedTracks = selected };
+    const TrackCandidateContext ctx{ .candidateTrackId = T1, .selectedTracks = selected, .seedTrackIds = {} };
     EXPECT_FALSE(constraint.rejects(ctx));
+}
+
+TEST(InterpolationFitConstraint, zeroScoreWhenNoSeeds)
+{
+    const TestVectorMap trackVectors{ { T1, &v_x } };
+    const InterpolationFitConstraint<2> constraint{ trackVectors };
+    const TrackCandidateContext ctx{ .candidateTrackId = T1, .selectedTracks = {}, .seedTrackIds = {} };
+    EXPECT_FLOAT_EQ(constraint.computeScore(ctx), 0.F);
+}
+
+TEST(InterpolationFitConstraint, zeroScoreWhenCandidateMatchesSeed)
+{
+    const TestVectorMap trackVectors{ { T1, &v_x }, { T2, &v_x } };
+    const InterpolationFitConstraint<2> constraint{ trackVectors };
+    const std::vector<db::TrackId> seeds{ T2 };
+    const TrackCandidateContext ctx{ .candidateTrackId = T1, .selectedTracks = {}, .seedTrackIds = seeds };
+    EXPECT_FLOAT_EQ(constraint.computeScore(ctx), 0.F);
+}
+
+TEST(InterpolationFitConstraint, halfScoreWhenCandidateOrthogonalToSeed)
+{
+    const TestVectorMap trackVectors{ { T1, &v_x }, { T2, &v_y } };
+    const InterpolationFitConstraint<2> constraint{ trackVectors };
+    const std::vector<db::TrackId> seeds{ T2 };
+    const TrackCandidateContext ctx{ .candidateTrackId = T1, .selectedTracks = {}, .seedTrackIds = seeds };
+    EXPECT_FLOAT_EQ(constraint.computeScore(ctx), 0.5F);
+}
+
+TEST(InterpolationFitConstraint, usesClosestSeed)
+{
+    const TestVectorMap trackVectors{ { T1, &v_x }, { T2, &v_x }, { T3, &v_y } };
+    const InterpolationFitConstraint<2> constraint{ trackVectors };
+    const std::vector<db::TrackId> seeds{ T3, T2 };
+    const TrackCandidateContext ctx{ .candidateTrackId = T1, .selectedTracks = {}, .seedTrackIds = seeds };
+    EXPECT_FLOAT_EQ(constraint.computeScore(ctx), 0.F);
+}
+
+TEST(MaxDistanceConstraint, acceptsWhenNoSeeds)
+{
+    const TestVectorMap trackVectors{ { T1, &v_x } };
+    const MaxDistanceConstraint<2> constraint{ trackVectors, 0.5F };
+    const TrackCandidateContext ctx{ .candidateTrackId = T1, .selectedTracks = {}, .seedTrackIds = {} };
+    EXPECT_FALSE(constraint.rejects(ctx));
+}
+
+TEST(MaxDistanceConstraint, acceptsWhenWithinThresholdOfOneSeed)
+{
+    const TestVectorMap trackVectors{ { T1, &v_x }, { T2, &v_x } };
+    const MaxDistanceConstraint<2> constraint{ trackVectors, 0.5F };
+    const std::vector<db::TrackId> seeds{ T2 };
+    const TrackCandidateContext ctx{ .candidateTrackId = T1, .selectedTracks = {}, .seedTrackIds = seeds };
+    EXPECT_FALSE(constraint.rejects(ctx));
+}
+
+TEST(MaxDistanceConstraint, rejectsWhenBeyondThresholdFromAllSeeds)
+{
+    const TestVectorMap trackVectors{ { T1, &v_x }, { T2, &v_y } };
+    const MaxDistanceConstraint<2> constraint{ trackVectors, 0.1F };
+    const std::vector<db::TrackId> seeds{ T2 };
+    const TrackCandidateContext ctx{ .candidateTrackId = T1, .selectedTracks = {}, .seedTrackIds = seeds };
+    EXPECT_TRUE(constraint.rejects(ctx));
+}
+
+TEST(MaxDistanceConstraint, acceptsWhenAnyOfManySeedsIsCloseEnough)
+{
+    const TestVectorMap trackVectors{ { T1, &v_x }, { T2, &v_y }, { T3, &v_x } };
+    const MaxDistanceConstraint<2> constraint{ trackVectors, 0.5F };
+    const std::vector<db::TrackId> seeds{ T2, T3 };
+    const TrackCandidateContext ctx{ .candidateTrackId = T1, .selectedTracks = {}, .seedTrackIds = seeds };
+    EXPECT_FALSE(constraint.rejects(ctx));
+}
+
+TEST(SmoothTransitionConstraint, zeroScoreWhenNoSelectedTracks)
+{
+    const TestVectorMap trackVectors{ { T1, &v_x } };
+    const SmoothTransitionConstraint<2> constraint{ trackVectors };
+    const TrackCandidateContext ctx{ .candidateTrackId = T1, .selectedTracks = {}, .seedTrackIds = {} };
+    EXPECT_FLOAT_EQ(constraint.computeScore(ctx), 0.F);
+}
+
+TEST(SmoothTransitionConstraint, zeroScoreWhenPreviousMatchesCandidate)
+{
+    const TestVectorMap trackVectors{ { T1, &v_x }, { T2, &v_x } };
+    const SmoothTransitionConstraint<2> constraint{ trackVectors };
+    const std::vector<db::TrackId> selected{ T2 };
+    const TrackCandidateContext ctx{ .candidateTrackId = T1, .selectedTracks = selected, .seedTrackIds = {} };
+    EXPECT_FLOAT_EQ(constraint.computeScore(ctx), 0.F);
+}
+
+TEST(SmoothTransitionConstraint, halfScoreWhenPreviousOrthogonalToCandidate)
+{
+    const TestVectorMap trackVectors{ { T1, &v_x }, { T2, &v_y } };
+    const SmoothTransitionConstraint<2> constraint{ trackVectors };
+    const std::vector<db::TrackId> selected{ T2 };
+    const TrackCandidateContext ctx{ .candidateTrackId = T1, .selectedTracks = selected, .seedTrackIds = {} };
+    EXPECT_FLOAT_EQ(constraint.computeScore(ctx), 0.5F);
+}
+
+TEST(SmoothTransitionConstraint, usesMostRecentlySelectedTrack)
+{
+    const TestVectorMap trackVectors{ { T1, &v_x }, { T2, &v_x }, { T3, &v_y } };
+    const SmoothTransitionConstraint<2> constraint{ trackVectors };
+    const std::vector<db::TrackId> selected{ T3, T2 };
+    const TrackCandidateContext ctx{ .candidateTrackId = T1, .selectedTracks = selected, .seedTrackIds = {} };
+    EXPECT_FLOAT_EQ(constraint.computeScore(ctx), 0.F);
 }

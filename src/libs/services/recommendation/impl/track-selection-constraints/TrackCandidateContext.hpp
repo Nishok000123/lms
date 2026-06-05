@@ -29,7 +29,6 @@ namespace lms::recommendation
     {
         db::TrackId candidateTrackId;
         std::span<const db::TrackId> selectedTracks;
-        float distanceToQuery{};
-        float distanceToPrevious{};
+        std::span<const db::TrackId> seedTrackIds;
     };
 } // namespace lms::recommendation
