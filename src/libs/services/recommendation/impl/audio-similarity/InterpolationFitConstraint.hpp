@@ -19,7 +19,7 @@
 
 #pragma once
 
-#include <limits>
+#include <optional>
 #include <unordered_map>
 
 #include "database/objects/TrackId.hpp"
@@ -53,14 +53,17 @@ namespace lms::recommendation
             if (itCand == _trackVectors.cend())
                 return {};
 
-            float best{ std::numeric_limits<float>::max() };
+            std::optional<float> best;
             for (const db::TrackId seedId : context.seedTrackIds)
             {
                 const auto it{ _trackVectors.find(seedId) };
                 if (it != _trackVectors.cend())
-                    best = std::min(best, math::computeNormalizedCosineDistance(*it->second, *itCand->second));
+                {
+                    const float dist{ math::computeNormalizedCosineDistance(*it->second, *itCand->second) };
+                    best = best ? std::min(*best, dist) : dist;
+                }
             }
-            return (best == std::numeric_limits<float>::max()) ? 0.F : best;
+            return best.value_or(0.F);
         }
 
     private:
