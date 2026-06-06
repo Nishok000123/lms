@@ -1,28 +1,9 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <messages xmlns:if="Wt.WTemplate.conditions">
 
-<message id="Lms.Settings.subsonic.template">
+<message id="Lms.Settings.subsonic.template.form">
 	<form class="row g-3">
 		<legend>${tr:Lms.Settings.subsonic-api}</legend>
-		<div class="col-lg-12">
-			<label class="form-label" for="${id:subsonic-token}">
-				${tr:Lms.Settings.subsonic-token}
-				${<if-has-subsonic-token-usage>}
-				<button type="button" class="btn btn-sm p-0" data-bs-toggle="tooltip" data-bs-placement="right" title="${tr:Lms.Settings.subsonic-token-usage}">
-					<i class="fa fa-fw fa-info-circle" aria-hidden="true"></i>
-				</button>
-				${</if-has-subsonic-token-usage>}
-			</label>
-			<div class="input-group mb-3">
-				${subsonic-token-regen-btn class="btn btn-outline-secondary"}
-				${subsonic-token-del-btn class="btn btn-outline-warning"}
-				${subsonic-token class="form-control"}
-				${subsonic-token-visibility-btn class="btn btn-outline-secondary"}
-				<div class="invalid-feedback">
-					${subsonic-token-info class="help-block"}
-				</div>
-			</div>
-		</div>
 		<div class="col-12">
 			<div class="form-check">
 				${subsonic-enable-transcoding-by-default class="form-check-input"}
@@ -67,6 +48,70 @@
 	</form>
 	<hr/>
 	${save-btn class="btn btn-primary me-1"}${discard-btn class="btn btn-secondary"}
+</message>
+
+<message id="Lms.Settings.subsonic.template.key">
+	<div class="card mt-3">
+		<div class="card-header">
+			${tr:Lms.Settings.subsonic-token}
+			${<if-has-subsonic-token-usage>}
+			<button type="button" class="btn btn-sm p-0" data-bs-toggle="tooltip" data-bs-placement="right" title="${tr:Lms.Settings.subsonic-token-usage}">
+				<i class="fa fa-fw fa-info-circle" aria-hidden="true"></i>
+			</button>
+			${</if-has-subsonic-token-usage>}
+		</div>
+		<div class="card-body">
+			<div class="input-group mb-3">
+				${subsonic-token class="form-control"}
+				${subsonic-token-visibility-btn class="btn btn-outline-secondary"}
+			</div>
+			<div class="d-flex gap-2">
+				${subsonic-token-regen-btn class="btn btn-secondary"}
+				${subsonic-token-copy-btn class="btn btn-secondary"}
+				<div class="ms-auto">
+					${subsonic-token-del-btn class="btn btn-secondary"}
+				</div>
+			</div>
+		</div>
+	</div>
+</message>
+
+<message id="Lms.Settings.subsonic.template.regen-confirm">
+	<div class="modal fade" tabindex="-1">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title">${tr:Lms.Settings.subsonic-token-regen-confirm-title}</h5>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body">
+					${tr:Lms.Settings.subsonic-token-regen-confirm-body}
+				</div>
+				<div class="modal-footer">
+					${confirm-btn class="btn btn-warning me-1"}${cancel-btn class="btn btn-secondary"}
+				</div>
+			</div>
+		</div>
+	</div>
+</message>
+
+<message id="Lms.Settings.subsonic.template.del-confirm">
+	<div class="modal fade" tabindex="-1">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title">${tr:Lms.Settings.subsonic-token-del-confirm-title}</h5>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body">
+					${tr:Lms.Settings.subsonic-token-del-confirm-body}
+				</div>
+				<div class="modal-footer">
+					${confirm-btn class="btn btn-danger me-1"}${cancel-btn class="btn btn-secondary"}
+				</div>
+			</div>
+		</div>
+	</div>
 </message>
 
 </messages>

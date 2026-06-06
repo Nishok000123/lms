@@ -26,6 +26,7 @@
 #include <Wt/WAnchor.h>
 #include <Wt/WText.h>
 
+#include "core/String.hpp"
 #include "database/Session.hpp"
 #include "database/objects/Artist.hpp"
 #include "database/objects/Cluster.hpp"
@@ -500,5 +501,10 @@ namespace lms::ui::utils
             res = std::make_unique<Wt::WText>(Wt::WString::fromUTF8(std::string{ copyright }), Wt::TextFormat::Plain);
 
         return res;
+    }
+
+    void copyToClipboard(std::string_view text)
+    {
+        LmsApp->doJavaScript("navigator.clipboard.writeText('" + core::stringUtils::jsEscape(text) + "').catch(function(){})");
     }
 } // namespace lms::ui::utils

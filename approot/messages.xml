@@ -6,6 +6,7 @@
 <message id="Lms.add">Add</message>
 <message id="Lms.administration">Administration</message>
 <message id="Lms.cancel">Cancel</message>
+<message id="Lms.copy">Copy</message>
 <message id="Lms.clusters">Tags</message>
 <message id="Lms.create">Create</message>
 <message id="Lms.delete">Delete</message>
@@ -364,7 +365,14 @@
 <message id="Lms.Settings.original-date-desc">Original Release Date (Descending)</message>
 <message id="Lms.Settings.password-bad">Bad password</message>
 <message id="Lms.Settings.password-must-fill-old-password">Old password must be filled in</message>
-<message id="Lms.Settings.regen-token">Generate</message>
+<message id="Lms.Settings.generate-token">Generate</message>
+<message id="Lms.Settings.subsonic-token-copied">API key copied to clipboard!</message>
+<message id="Lms.Settings.subsonic-token-del-confirm">Delete</message>
+<message id="Lms.Settings.subsonic-token-del-confirm-body">Deleting the key will disconnect all clients currently using it.</message>
+<message id="Lms.Settings.subsonic-token-del-confirm-title">Delete API key?</message>
+<message id="Lms.Settings.subsonic-token-regen-confirm">Regenerate</message>
+<message id="Lms.Settings.subsonic-token-regen-confirm-body">Generating a new key will invalidate all clients currently using the existing key.</message>
+<message id="Lms.Settings.subsonic-token-regen-confirm-title">Regenerate API key?</message>
 <message id="Lms.Settings.replaygain-mode">ReplayGain mode</message>
 <message id="Lms.Settings.replaygain-mode.none">No ReplayGain</message>
 <message id="Lms.Settings.replaygain-mode.auto">Auto</message>

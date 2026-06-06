@@ -30,5 +30,7 @@ namespace lms::ui
 
     private:
         void refreshView();
+        void refreshForm();
+        void refreshSubsonicKey();
     };
 } // namespace lms::ui

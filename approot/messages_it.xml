@@ -6,6 +6,7 @@
 <message id="Lms.add">Aggiungi</message>
 <message id="Lms.administration">Amministrazione</message>
 <message id="Lms.cancel">Annulla</message>
+<message id="Lms.copy">Copia</message>
 <message id="Lms.clusters">Tags</message>
 <message id="Lms.create">Crea</message>
 <message id="Lms.delete">Elimina</message>
@@ -364,7 +365,14 @@
 <message id="Lms.Settings.original-date-desc">Data di uscita originale (Decrescente)</message>
 <message id="Lms.Settings.password-bad">Password errata</message>
 <message id="Lms.Settings.password-must-fill-old-password">Devi inserire la password attuale</message>
-<message id="Lms.Settings.regen-token">Genera</message>
+<message id="Lms.Settings.generate-token">Genera</message>
+<message id="Lms.Settings.subsonic-token-copied">Chiave API copiata negli appunti!</message>
+<message id="Lms.Settings.subsonic-token-del-confirm">Elimina</message>
+<message id="Lms.Settings.subsonic-token-del-confirm-body">Eliminare la chiave disconnetterà tutti i client che la stanno utilizzando.</message>
+<message id="Lms.Settings.subsonic-token-del-confirm-title">Eliminare la chiave API?</message>
+<message id="Lms.Settings.subsonic-token-regen-confirm">Rigenera</message>
+<message id="Lms.Settings.subsonic-token-regen-confirm-body">Generare una nuova chiave invaliderà tutti i client che attualmente utilizzano la chiave esistente.</message>
+<message id="Lms.Settings.subsonic-token-regen-confirm-title">Rigenerare la chiave API?</message>
 <message id="Lms.Settings.replaygain-mode">Modalità ReplayGain</message>
 <message id="Lms.Settings.replaygain-mode.none">No ReplayGain</message>
 <message id="Lms.Settings.replaygain-mode.auto">Automatica</message>

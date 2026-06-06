@@ -32,17 +32,17 @@
 #include "core/UUID.hpp"
 
 #include "database/Session.hpp"
-#include "database/Types.hpp"
 #include "database/objects/User.hpp"
 #include "services/auth/IAuthTokenService.hpp"
 
 #include "LmsApplication.hpp"
+#include "ModalManager.hpp"
 #include "Tooltip.hpp"
 #include "common/MandatoryValidator.hpp"
-#include "common/UUIDValidator.hpp"
 #include "common/ValueStringModel.hpp"
 
 #include "SettingsViewUtils.hpp"
+#include "Utils.hpp"
 
 namespace lms::ui
 {
@@ -51,14 +51,12 @@ namespace lms::ui
         class SubsonicSettingsModel : public Wt::WFormModel
         {
         public:
-            static inline const Field SubsonicTokenField{ "subsonic-token" };
             static inline const Field SubsonicEnableTranscodingByDefault{ "subsonic-enable-transcoding-by-default" };
             static inline const Field SubsonicArtistListModeField{ "subsonic-artist-list-mode" };
             static inline const Field SubsonicTranscodingOutputFormatField{ "subsonic-transcoding-output-format" };
             static inline const Field SubsonicTranscodingOutputBitrateField{ "subsonic-transcoding-output-bitrate" };
 
-            explicit SubsonicSettingsModel(auth::IAuthTokenService& authTokenService)
-                : _authTokenService{ authTokenService }
+            SubsonicSettingsModel()
             {
                 _transcodingOutputBitrateModel = std::make_shared<ValueStringModel<db::Bitrate>>();
                 db::visitAllowedAudioBitrates([&](const db::Bitrate bitrate) {
@@ -75,13 +73,11 @@ namespace lms::ui
                 _subsonicArtistListModeModel->add(Wt::WString::tr("Lms.Settings.subsonic-artist-list-mode.release-artists"), db::SubsonicArtistListMode::ReleaseArtists);
                 _subsonicArtistListModeModel->add(Wt::WString::tr("Lms.Settings.subsonic-artist-list-mode.track-artists"), db::SubsonicArtistListMode::TrackArtists);
 
-                addField(SubsonicTokenField);
                 addField(SubsonicEnableTranscodingByDefault);
                 addField(SubsonicTranscodingOutputBitrateField);
                 addField(SubsonicTranscodingOutputFormatField);
                 addField(SubsonicArtistListModeField);
 
-                setValidator(SubsonicTokenField, createUUIDValidator());
                 setValidator(SubsonicTranscodingOutputBitrateField, createMandatoryValidator());
                 setValidator(SubsonicTranscodingOutputFormatField, createMandatoryValidator());
 
@@ -96,29 +92,6 @@ namespace lms::ui
             {
                 auto transaction{ LmsApp->getDbSession().createWriteTransaction() };
                 db::User::pointer user{ LmsApp->getUser() };
-
-                const std::string token{ Wt::asString(value(SubsonicTokenField)).toUTF8() };
-                if (token.empty())
-                {
-                    _authTokenService.clearAuthTokens("subsonic", user->getId());
-                }
-                else
-                {
-                    bool hasNonMatchingToken{ false };
-                    bool hasMatchingToken{ false };
-                    _authTokenService.visitAuthTokens("subsonic", user->getId(), [&](const auth::IAuthTokenService::AuthTokenInfo&, std::string_view storedToken) {
-                        if (storedToken == token)
-                            hasMatchingToken = true;
-                        else
-                            hasNonMatchingToken = true;
-                    });
-
-                    if (!hasMatchingToken || hasNonMatchingToken)
-                    {
-                        _authTokenService.clearAuthTokens("subsonic", user->getId());
-                        _authTokenService.createAuthToken("subsonic", user->getId(), token);
-                    }
-                }
 
                 user.modify()->setSubsonicEnableTranscodingByDefault(Wt::asNumber(value(SubsonicEnableTranscodingByDefault)) != 0);
 
@@ -140,11 +113,6 @@ namespace lms::ui
                 auto transaction{ LmsApp->getDbSession().createReadTransaction() };
                 const db::User::pointer user{ LmsApp->getUser() };
 
-                _authTokenService.visitAuthTokens("subsonic", user->getId(), [&](const auth::IAuthTokenService::AuthTokenInfo&, std::string_view storedToken) {
-                    if (Wt::asString(value(SubsonicTokenField)).empty())
-                        setValue(SubsonicTokenField, Wt::WString::fromUTF8(std::string{ storedToken }));
-                });
-
                 setValue(SubsonicEnableTranscodingByDefault, user->getSubsonicEnableTranscodingByDefault());
 
                 auto subsonicTranscodingOutputBitrateRow{ _transcodingOutputBitrateModel->getRowFromValue(user->getSubsonicDefaultTranscodingOutputBitrate()) };
@@ -161,7 +129,6 @@ namespace lms::ui
             }
 
         private:
-            auth::IAuthTokenService& _authTokenService;
             std::shared_ptr<ValueStringModel<db::Bitrate>> _transcodingOutputBitrateModel;
             std::shared_ptr<ValueStringModel<db::TranscodingOutputFormat>> _transcodingOutputFormatModel;
             std::shared_ptr<ValueStringModel<db::SubsonicArtistListMode>> _subsonicArtistListModeModel;
@@ -184,34 +151,15 @@ namespace lms::ui
 
         clear();
 
-        auto* t{ addNew<Wt::WTemplateFormView>(Wt::WString::tr("Lms.Settings.subsonic.template")) };
-        t->setCondition("if-has-subsonic-token-usage", core::Service<core::IConfig>::get()->getBool("api-subsonic-support-user-password-auth", true));
+        refreshForm();
+        refreshSubsonicKey();
+    }
 
-        auto model{ std::make_shared<SubsonicSettingsModel>(*core::Service<auth::IAuthTokenService>::get()) };
+    void SubsonicSettingsView::refreshForm()
+    {
+        auto model{ std::make_shared<SubsonicSettingsModel>() };
 
-        auto subsonicToken{ std::make_unique<Wt::WLineEdit>() };
-        Wt::WLineEdit* subsonicTokenPtr{ subsonicToken.get() };
-        subsonicTokenPtr->setEchoMode(Wt::EchoMode::Password);
-        subsonicTokenPtr->setReadOnly(true);
-        t->setFormWidget(SubsonicSettingsModel::SubsonicTokenField, std::move(subsonicToken));
-
-        auto subsonicTokenRegenBtn{ std::make_unique<Wt::WPushButton>(Wt::WString::tr("Lms.Settings.regen-token")) };
-        subsonicTokenRegenBtn->clicked().connect(this, [subsonicTokenPtr] {
-            subsonicTokenPtr->setValueText(Wt::WString::fromUTF8(std::string{ core::UUID::generate().getAsString() }));
-        });
-        t->bindWidget("subsonic-token-regen-btn", std::move(subsonicTokenRegenBtn));
-
-        auto subsonicTokenVisibilityBtn{ std::make_unique<Wt::WPushButton>(Wt::WString::tr("Lms.template.toggle-visibility-btn"), Wt::TextFormat::XHTML) };
-        subsonicTokenVisibilityBtn->clicked().connect(this, [subsonicTokenPtr] {
-            subsonicTokenPtr->setEchoMode(subsonicTokenPtr->echoMode() == Wt::EchoMode::Password ? Wt::EchoMode::Normal : Wt::EchoMode::Password);
-        });
-        t->bindWidget("subsonic-token-visibility-btn", std::move(subsonicTokenVisibilityBtn));
-
-        auto subsonicTokenDelBtn{ std::make_unique<Wt::WPushButton>(Wt::WString::tr("Lms.template.trash-btn"), Wt::TextFormat::XHTML) };
-        subsonicTokenDelBtn->clicked().connect(this, [subsonicTokenPtr] {
-            subsonicTokenPtr->setValueText("");
-        });
-        t->bindWidget("subsonic-token-del-btn", std::move(subsonicTokenDelBtn));
+        auto* t{ addNew<Wt::WTemplateFormView>(Wt::WString::tr("Lms.Settings.subsonic.template.form")) };
 
         t->setFormWidget(SubsonicSettingsModel::SubsonicEnableTranscodingByDefault, std::make_unique<Wt::WCheckBox>());
 
@@ -229,6 +177,138 @@ namespace lms::ui
 
         utils::bindSaveDiscardButtons(t, model.get(), [model] { model->saveData(); }, [model] { model->loadData(); });
         t->updateView(model.get());
+        initTooltipsForWidgetTree(*t);
+    }
+
+    void SubsonicSettingsView::refreshSubsonicKey()
+    {
+        auto* t{ addNew<Wt::WTemplate>(Wt::WString::tr("Lms.Settings.subsonic.template.key")) };
+        t->addFunction("tr", &Wt::WTemplate::Functions::tr);
+
+        t->setCondition("if-has-subsonic-token-usage", core::Service<core::IConfig>::get()->getBool("api-subsonic-support-user-password-auth", true));
+
+        std::string currentToken;
+        {
+            auto transaction{ LmsApp->getDbSession().createReadTransaction() };
+            core::Service<auth::IAuthTokenService>::get()->visitAuthTokens("subsonic", LmsApp->getUser()->getId(),
+                                                                           [&](const auth::IAuthTokenService::AuthTokenInfo&, std::string_view storedToken) {
+                                                                               currentToken = std::string{ storedToken };
+                                                                           });
+        }
+
+        auto subsonicToken{ std::make_unique<Wt::WLineEdit>() };
+        Wt::WLineEdit* subsonicTokenPtr{ subsonicToken.get() };
+        subsonicTokenPtr->setEchoMode(Wt::EchoMode::Password);
+        subsonicTokenPtr->setReadOnly(true);
+        subsonicTokenPtr->setValueText(Wt::WString::fromUTF8(currentToken));
+        t->bindWidget("subsonic-token", std::move(subsonicToken));
+
+        auto subsonicTokenDelBtn{ std::make_unique<Wt::WPushButton>(Wt::WString::tr("Lms.delete")) };
+        Wt::WPushButton* subsonicTokenDelBtnPtr{ subsonicTokenDelBtn.get() };
+
+        auto subsonicTokenCopyBtn{ std::make_unique<Wt::WPushButton>(Wt::WString::tr("Lms.copy")) };
+        Wt::WPushButton* subsonicTokenCopyBtnPtr{ subsonicTokenCopyBtn.get() };
+
+        auto updateKeyButtonStates{ [subsonicTokenDelBtnPtr, subsonicTokenCopyBtnPtr, subsonicTokenPtr] {
+            const bool hasToken{ !subsonicTokenPtr->valueText().empty() };
+            subsonicTokenDelBtnPtr->setDisabled(!hasToken);
+            subsonicTokenCopyBtnPtr->setDisabled(!hasToken);
+        } };
+        updateKeyButtonStates();
+
+        auto subsonicTokenRegenBtn{ std::make_unique<Wt::WPushButton>(Wt::WString::tr("Lms.Settings.generate-token")) };
+        subsonicTokenRegenBtn->clicked().connect(t, [t, subsonicTokenPtr, updateKeyButtonStates] {
+            if (LmsApp->getUserType() == db::UserType::DEMO)
+            {
+                LmsApp->notifyMsg(Notification::Type::Warning, Wt::WString::tr("Lms.Settings.demo-cannot-save"));
+                return;
+            }
+
+            auto doGenerate{ [subsonicTokenPtr, updateKeyButtonStates] {
+                const std::string newToken{ core::UUID::generate().getAsString() };
+                {
+                    auto transaction{ LmsApp->getDbSession().createWriteTransaction() };
+                    auto& authService{ *core::Service<auth::IAuthTokenService>::get() };
+                    authService.clearAuthTokens("subsonic", LmsApp->getUser()->getId());
+                    authService.createAuthToken("subsonic", LmsApp->getUser()->getId(), newToken);
+                }
+                subsonicTokenPtr->setValueText(Wt::WString::fromUTF8(newToken));
+                updateKeyButtonStates();
+            } };
+
+            if (!subsonicTokenPtr->valueText().empty())
+            {
+                auto modal{ std::make_unique<Wt::WTemplate>(Wt::WString::tr("Lms.Settings.subsonic.template.regen-confirm")) };
+                modal->addFunction("tr", &Wt::WTemplate::Functions::tr);
+                Wt::WWidget* modalPtr{ modal.get() };
+                modal->bindNew<Wt::WPushButton>("confirm-btn", Wt::WString::tr("Lms.Settings.subsonic-token-regen-confirm"))
+                    ->clicked()
+                    .connect(t, [doGenerate, modalPtr] {
+                        doGenerate();
+                        LmsApp->getModalManager().dispose(modalPtr);
+                    });
+                modal->bindNew<Wt::WPushButton>("cancel-btn", Wt::WString::tr("Lms.cancel"))
+                    ->clicked()
+                    .connect(t, [modalPtr] {
+                        LmsApp->getModalManager().dispose(modalPtr);
+                    });
+
+                LmsApp->getModalManager().show(std::move(modal));
+            }
+            else
+            {
+                doGenerate();
+            }
+        });
+        t->bindWidget("subsonic-token-regen-btn", std::move(subsonicTokenRegenBtn));
+
+        subsonicTokenDelBtn->clicked().connect(t, [t, subsonicTokenPtr, updateKeyButtonStates] {
+            if (LmsApp->getUserType() == db::UserType::DEMO)
+            {
+                LmsApp->notifyMsg(Notification::Type::Warning, Wt::WString::tr("Lms.Settings.demo-cannot-save"));
+                return;
+            }
+
+            auto modal{ std::make_unique<Wt::WTemplate>(Wt::WString::tr("Lms.Settings.subsonic.template.del-confirm")) };
+            modal->addFunction("tr", &Wt::WTemplate::Functions::tr);
+            Wt::WWidget* modalPtr{ modal.get() };
+            modal->bindNew<Wt::WPushButton>("confirm-btn", Wt::WString::tr("Lms.Settings.subsonic-token-del-confirm"))
+                ->clicked()
+                .connect(t, [subsonicTokenPtr, updateKeyButtonStates, modalPtr] {
+                    {
+                        auto transaction{ LmsApp->getDbSession().createWriteTransaction() };
+                        core::Service<auth::IAuthTokenService>::get()->clearAuthTokens("subsonic", LmsApp->getUser()->getId());
+                    }
+                    subsonicTokenPtr->setValueText("");
+                    updateKeyButtonStates();
+                    LmsApp->getModalManager().dispose(modalPtr);
+                });
+            modal->bindNew<Wt::WPushButton>("cancel-btn", Wt::WString::tr("Lms.cancel"))
+                ->clicked()
+                .connect(t, [modalPtr] {
+                    LmsApp->getModalManager().dispose(modalPtr);
+                });
+
+            LmsApp->getModalManager().show(std::move(modal));
+        });
+        t->bindWidget("subsonic-token-del-btn", std::move(subsonicTokenDelBtn));
+
+        subsonicTokenCopyBtn->clicked().connect(t, [subsonicTokenPtr] {
+            const std::string val{ subsonicTokenPtr->valueText().toUTF8() };
+            if (!val.empty())
+            {
+                utils::copyToClipboard(val);
+                LmsApp->notifyMsg(Notification::Type::Info, Wt::WString::tr("Lms.Settings.subsonic-token-copied"));
+            }
+        });
+        t->bindWidget("subsonic-token-copy-btn", std::move(subsonicTokenCopyBtn));
+
+        auto subsonicTokenVisibilityBtn{ std::make_unique<Wt::WPushButton>(Wt::WString::tr("Lms.template.toggle-visibility-btn"), Wt::TextFormat::XHTML) };
+        subsonicTokenVisibilityBtn->clicked().connect(t, [subsonicTokenPtr] {
+            subsonicTokenPtr->setEchoMode(subsonicTokenPtr->echoMode() == Wt::EchoMode::Password ? Wt::EchoMode::Normal : Wt::EchoMode::Password);
+        });
+        t->bindWidget("subsonic-token-visibility-btn", std::move(subsonicTokenVisibilityBtn));
+
         initTooltipsForWidgetTree(*t);
     }
 } // namespace lms::ui

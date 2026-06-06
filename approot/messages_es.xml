@@ -6,6 +6,7 @@
 <message id="Lms.add">Añadir</message>
 <message id="Lms.administration">Administración</message>
 <message id="Lms.cancel">Cancelar</message>
+<message id="Lms.copy">Copiar</message>
 <message id="Lms.clusters">Etiquetas</message>
 <message id="Lms.create">Crear</message>
 <message id="Lms.delete">Eliminar</message>
@@ -364,7 +365,14 @@
 <message id="Lms.Settings.original-date-desc">Fecha de publicación original (Descendiente)</message>
 <message id="Lms.Settings.password-bad">Contraseña incorrecta</message>
 <message id="Lms.Settings.password-must-fill-old-password">La contraseña antigua debe ser introducida</message>
-<message id="Lms.Settings.regen-token">Regenerar</message>
+<message id="Lms.Settings.generate-token">Regenerar</message>
+<message id="Lms.Settings.subsonic-token-copied">¡Clave API copiada al portapapeles!</message>
+<message id="Lms.Settings.subsonic-token-del-confirm">Eliminar</message>
+<message id="Lms.Settings.subsonic-token-del-confirm-body">Eliminar la clave desconectará todos los clientes que la estén usando actualmente.</message>
+<message id="Lms.Settings.subsonic-token-del-confirm-title">¿Eliminar la clave API?</message>
+<message id="Lms.Settings.subsonic-token-regen-confirm">Regenerar</message>
+<message id="Lms.Settings.subsonic-token-regen-confirm-body">Generar una nueva clave invalidará todos los clientes que usen la clave actual.</message>
+<message id="Lms.Settings.subsonic-token-regen-confirm-title">¿Regenerar la clave API?</message>
 <message id="Lms.Settings.replaygain-mode">Modo ReplayGain</message>
 <message id="Lms.Settings.replaygain-mode.none">Sin ReplayGain</message>
 <message id="Lms.Settings.replaygain-mode.auto">Automático</message>

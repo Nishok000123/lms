@@ -6,6 +6,7 @@
 <message id="Lms.add">添加</message>
 <message id="Lms.administration">管理</message>
 <message id="Lms.cancel">取消</message>
+<message id="Lms.copy">复制</message>
 <message id="Lms.clusters">标签</message>
 <message id="Lms.create">新建</message>
 <message id="Lms.delete">删除</message>
@@ -335,7 +336,14 @@
 <message id="Lms.Settings.original-date-desc">原始发行日期（降序）</message>
 <message id="Lms.Settings.password-bad">无效密码</message>
 <message id="Lms.Settings.password-must-fill-old-password">必须填写旧密码</message>
-<message id="Lms.Settings.regen-token">生成</message>
+<message id="Lms.Settings.generate-token">生成</message>
+<message id="Lms.Settings.subsonic-token-copied">API 密钥已复制到剪贴板！</message>
+<message id="Lms.Settings.subsonic-token-del-confirm">删除</message>
+<message id="Lms.Settings.subsonic-token-del-confirm-body">删除密钥将断开所有当前使用该密钥的客户端连接。</message>
+<message id="Lms.Settings.subsonic-token-del-confirm-title">删除 API 密钥？</message>
+<message id="Lms.Settings.subsonic-token-regen-confirm">重新生成</message>
+<message id="Lms.Settings.subsonic-token-regen-confirm-body">生成新密钥将使所有当前使用现有密钥的客户端失效。</message>
+<message id="Lms.Settings.subsonic-token-regen-confirm-title">重新生成 API 密钥？</message>
 <message id="Lms.Settings.replaygain-mode">ReplayGain 模式</message>
 <message id="Lms.Settings.replaygain-mode.none">没有 ReplayGain</message>
 <message id="Lms.Settings.replaygain-mode.auto">自动模式</message>
