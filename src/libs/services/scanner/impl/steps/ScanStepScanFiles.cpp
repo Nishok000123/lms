@@ -33,6 +33,7 @@
 #include "scanners/IFileScanner.hpp"
 
 #include "FileScanners.hpp"
+#include "IgnoreRules.hpp"
 #include "JobQueue.hpp"
 #include "ScanContext.hpp"
 
@@ -41,7 +42,9 @@ namespace lms::scanner
     namespace
     {
         using ExploreFileCallback = std::function<bool(std::error_code, const std::filesystem::path& path, const std::filesystem::directory_entry*)>;
-        bool exploreFilesRecursive(const std::filesystem::path& directory, ExploreFileCallback cb, const std::filesystem::path* excludeDirFileName)
+        using ShouldIgnoreCallback = std::function<bool(const std::filesystem::path& absPath, IgnoreRules::IsDirectory)>;
+
+        bool exploreFilesRecursive(const std::filesystem::path& directory, const ExploreFileCallback& cb, const ShouldIgnoreCallback& shouldIgnore)
         {
             std::error_code ec;
             std::filesystem::directory_iterator itPath{ directory, std::filesystem::directory_options::follow_directory_symlink, ec };
@@ -50,16 +53,6 @@ namespace lms::scanner
             {
                 cb(ec, directory, nullptr);
                 return true; // try to continue exploring anyway
-            }
-
-            if (excludeDirFileName && !excludeDirFileName->empty())
-            {
-                const std::filesystem::path excludePath{ directory / *excludeDirFileName };
-                if (std::filesystem::exists(excludePath, ec))
-                {
-                    LMS_LOG(DBUPDATER, DEBUG, "Found " << excludePath << ": skipping directory");
-                    return true;
-                }
             }
 
             std::filesystem::directory_iterator itEnd;
@@ -74,12 +67,25 @@ namespace lms::scanner
                 {
                     continueExploring = cb(ec, path, nullptr);
                 }
-                else
+                else if (entry.is_regular_file())
                 {
-                    if (entry.is_regular_file())
-                        continueExploring = cb(ec, path, &entry);
-                    else if (entry.is_directory())
-                        continueExploring = exploreFilesRecursive(path, cb, excludeDirFileName);
+                    if (shouldIgnore(path, IgnoreRules::IsDirectory{ false }))
+                    {
+                        LMS_LOG(DBUPDATER, DEBUG, "Ignoring file " << path << " (matched .lmsignore rule)");
+                        itPath.increment(ec);
+                        continue;
+                    }
+                    continueExploring = cb(ec, path, &entry);
+                }
+                else if (entry.is_directory())
+                {
+                    if (shouldIgnore(path, IgnoreRules::IsDirectory{ true }))
+                    {
+                        LMS_LOG(DBUPDATER, DEBUG, "Ignoring directory " << path << " (matched .lmsignore rule)");
+                        itPath.increment(ec);
+                        continue;
+                    }
+                    continueExploring = exploreFilesRecursive(path, cb, shouldIgnore);
                 }
 
                 if (!continueExploring)
@@ -181,7 +187,7 @@ namespace lms::scanner
         constexpr std::size_t filesPerScanJob{ 10 };
         constexpr std::size_t scanQueueMaxSize{ 50 };
         constexpr std::size_t processFileResultsBatchSize{ 1 };
-        constexpr float drainRatio{ 0.85 };
+        constexpr float drainRatio{ 0.85F };
 
         std::deque<std::unique_ptr<IFileScanOperation>> operations;
 
@@ -203,12 +209,13 @@ namespace lms::scanner
         };
 
         {
-            JobQueue queue{ getJobScheduler(), scanQueueMaxSize, processDoneJobs, processFileResultsBatchSize, drainRatio };
+            JobQueue queue{ getJobScheduler(), processDoneJobs, { .maxQueueSize = scanQueueMaxSize, .processBatchSize = processFileResultsBatchSize, .drainThreshold = drainRatio } };
 
             std::vector<std::filesystem::directory_entry> filesToScan;
 
             exploreFilesRecursive(
-                mediaLibrary.rootDirectory, [&](std::error_code ec, const std::filesystem::path& path, const std::filesystem::directory_entry* fileEntry) {
+                mediaLibrary.rootDirectory,
+                [&](std::error_code ec, const std::filesystem::path& path, const std::filesystem::directory_entry* fileEntry) {
                     LMS_SCOPED_TRACE_DETAILED("Scanner", "OnExploreFile");
 
                     assert((ec && !fileEntry) || (!ec && fileEntry));
@@ -234,7 +241,9 @@ namespace lms::scanner
 
                     return true;
                 },
-                &excludeDirFileName);
+                [&](const std::filesystem::path& path, IgnoreRules::IsDirectory isDir) {
+                    return !mediaLibrary.ignoreRules.isEmpty() && mediaLibrary.ignoreRules.isIgnored(std::filesystem::relative(path, mediaLibrary.rootDirectory), isDir);
+                });
 
             if (!filesToScan.empty())
                 queue.push(std::make_unique<FileScanJob>(getFileScanners(), mediaLibrary, context.scanOptions.fullScan, filesToScan));

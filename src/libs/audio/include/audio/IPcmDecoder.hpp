@@ -43,8 +43,11 @@ namespace lms::audio
         // Each buffer must be sized to hold an integer number of samples according to the requested sample type.
         // For example, for Float32 planar output, each buffer size must be divisible by sizeof(float).
         // The decoder will use the buffer sizes to determine the maximum number of samples it can write.
+        // The decoder will not try to fill in the whole supplied buffer
         virtual std::size_t readSamples(std::span<WritableBuffer> outputChannelBuffers) = 0;
         virtual bool finished() const = 0;
+
+        virtual std::chrono::milliseconds getEstimatedDuration() const = 0; // initial offset is taken into account, 0 if unknown
     };
 
     // Throw on error

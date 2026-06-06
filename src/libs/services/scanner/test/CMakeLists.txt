@@ -3,9 +3,10 @@ include(GoogleTest)
 add_executable(test-scanner
 	ArtistInfo.cpp
 	AudioFileUtils.cpp
+	IgnoreFilter.cpp
 	Lyrics.cpp
 	PlayList.cpp
-	Scanner.cpp
+	ScannerStats.cpp
 	TrackMetadataParser.cpp
 	)
 
@@ -17,6 +18,7 @@ target_link_libraries(test-scanner PRIVATE
 	lmsscanner
 	lmsaudio
 	GTest::GTest
+	GTest::gtest_main
 	)
 
 if (NOT CMAKE_CROSSCOMPILING)

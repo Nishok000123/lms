@@ -26,6 +26,7 @@
 #include <Wt/WAnchor.h>
 #include <Wt/WText.h>
 
+#include "core/String.hpp"
 #include "database/Session.hpp"
 #include "database/objects/Artist.hpp"
 #include "database/objects/Cluster.hpp"
@@ -130,7 +131,7 @@ namespace lms::ui::utils
 
     std::unique_ptr<Wt::WInteractWidget> createFilter(const Wt::WString& name, const Wt::WString& tooltip, std::string_view colorStyleClass, bool canDelete)
     {
-        auto res{ std::make_unique<Wt::WText>(Wt::WString{ canDelete ? "<i class=\"fa fa-times-circle\"></i> " : "" } + name, Wt::TextFormat::UnsafeXHTML) };
+        auto res{ std::make_unique<Wt::WText>(Wt::WString{ canDelete ? "<i class=\"fa fa-times-circle\"></i> " : "" } + name, Wt::TextFormat::XHTML) };
 
         res->setStyleClass("Lms-badge-cluster badge me-1 " + std::string{ colorStyleClass }); // HACK
         res->setToolTip(tooltip, Wt::TextFormat::Plain);
@@ -500,5 +501,10 @@ namespace lms::ui::utils
             res = std::make_unique<Wt::WText>(Wt::WString::fromUTF8(std::string{ copyright }), Wt::TextFormat::Plain);
 
         return res;
+    }
+
+    void copyToClipboard(std::string_view text)
+    {
+        LmsApp->doJavaScript("navigator.clipboard.writeText('" + core::stringUtils::jsEscape(text) + "').catch(function(){})");
     }
 } // namespace lms::ui::utils

@@ -181,6 +181,7 @@ namespace lms::api::subsonic
         } };
 
         addClusters("moods", "MOOD");
+        addClusters("groupings", "GROUPING");
 
         // Genres
         albumNode.createEmptyArrayChild("genres");

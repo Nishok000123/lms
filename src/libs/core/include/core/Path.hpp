@@ -29,9 +29,8 @@ namespace lms::core::pathUtils
     // Check if file's extension is one of provided extensions
     bool hasFileAnyExtension(const std::filesystem::path& file, std::span<const std::filesystem::path> extensions);
 
-    // Check if a path is within a directory (excludeDirFileName is a relative can be used to exclude a whole directory and its subdirectory, must not have parent_path)
-    // Caller responsibility to call with normalized paths
-    bool isPathInRootPath(const std::filesystem::path& path, const std::filesystem::path& rootPath, const std::filesystem::path* excludeDirFileName = {});
+    // Check if a path is within a directory. Caller responsibility to call with normalized paths.
+    bool isPathInRootPath(const std::filesystem::path& path, const std::filesystem::path& rootPath);
 
     std::filesystem::path getLongestCommonPath(const std::filesystem::path& path1, const std::filesystem::path& path2);
 

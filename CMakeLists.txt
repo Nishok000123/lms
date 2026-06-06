@@ -49,9 +49,7 @@ if (BUILD_BENCHMARKS)
 	message(STATUS "Building benchmarks")
 endif()
 
-if (NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
-    add_definitions(-DNDEBUG)
-endif()
+add_compile_definitions($<$<NOT:$<CONFIG:Debug>>:NDEBUG>)
 
 add_subdirectory(src)
 
@@ -60,4 +58,3 @@ install(DIRECTORY docroot DESTINATION share/lms)
 install(FILES conf/systemd/default.service DESTINATION share/lms)
 install(FILES conf/pam/lms DESTINATION share/lms)
 install(FILES conf/lms.conf DESTINATION share/lms)
-

@@ -35,7 +35,7 @@ namespace lms::core::media
             CodecDesc{ Codec::DSD, "DSD", "Direct Stream Digital", true },
             CodecDesc{ Codec::EAC3, "E-AC3", "Dolby Digital Plus", false },
             CodecDesc{ Codec::FLAC, "FLAC", "Free Lossless Audio Codec", true },
-            CodecDesc{ Codec::MP3, "MP3", "MPEG-3", false },
+            CodecDesc{ Codec::MP3, "MP3", "MPEG-1 Layer 3", false },
             CodecDesc{ Codec::MP4ALS, "MP4ALS", "MPEG-4 Audio Lossless Coding", true },
             CodecDesc{ Codec::MPC7, "MPC7", "Musepack7", false },
             CodecDesc{ Codec::MPC8, "MPC8", "Musepack8", false },

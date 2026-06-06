@@ -10,10 +10,17 @@ add_executable(lms
 	ui/ModalManager.cpp
 	ui/NotificationContainer.cpp
 	ui/PlayQueue.cpp
-	ui/SettingsView.cpp
+	ui/settings/AudioSettingsView.cpp
+	ui/settings/PasswordSettingsView.cpp
+	ui/settings/ServicesSettingsView.cpp
+	ui/settings/SettingsView.cpp
+	ui/settings/SettingsViewUtils.cpp
+	ui/settings/SubsonicSettingsView.cpp
+	ui/settings/UISettingsView.cpp
 	ui/State.cpp
 	ui/Tooltip.cpp
 	ui/Utils.cpp
+	ui/admin/AdminView.cpp
 	ui/admin/debug/Database.cpp
 	ui/admin/debug/Tracing.cpp
 	ui/admin/About.cpp
@@ -27,6 +34,7 @@ add_executable(lms
 	ui/admin/UserView.cpp
 	ui/admin/UsersView.cpp
 	ui/common/DoubleValidator.cpp
+	ui/common/PathRouter.cpp
 	ui/common/InfiniteScrollingContainer.cpp
 	ui/common/LoadingIndicator.cpp
 	ui/common/LoginNameValidator.cpp

@@ -54,7 +54,7 @@ namespace lms::scanner
             else
             {
                 comment.directive = line.substr(0, parameterSeparator + 1);
-                comment.parameter = line.substr(parameterSeparator + 1);
+                comment.parameter = core::stringUtils::stringTrim(line.substr(parameterSeparator + 1));
             };
 
             return comment;
@@ -87,6 +87,12 @@ namespace lms::scanner
             {
                 if (comment->directive == "#PLAYLIST:")
                     playlist.name = comment->parameter;
+                else if (comment->directive == "#EXTIMG:")
+                {
+                    // skip URLs (contain ':' in the path value)
+                    if (!comment->parameter.empty() && comment->parameter.find(':') == std::string_view::npos)
+                        playlist.coverImage = std::filesystem::path{ comment->parameter }.lexically_normal();
+                }
 
                 continue;
             }

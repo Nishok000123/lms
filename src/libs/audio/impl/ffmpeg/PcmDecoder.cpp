@@ -127,6 +127,14 @@ namespace lms::audio::ffmpeg
             }
         }
 
+        {
+            _estimatedDuration = std::chrono::milliseconds{ _context->duration == AV_NOPTS_VALUE ? 0 : _context->duration / AV_TIME_BASE * 1'000 };
+            if (_estimatedDuration > offset)
+                _estimatedDuration = _estimatedDuration - std::chrono::duration_cast<std::chrono::milliseconds>(offset);
+            else
+                _estimatedDuration = {};
+        }
+
         _decoderContext = AVCodecContextPtr{ ::avcodec_alloc_context3(decoder) };
         if (!_decoderContext)
             throw Exception{ "Cannot allocate decoder context" };
@@ -225,7 +233,7 @@ namespace lms::audio::ffmpeg
             else
             {
                 std::array<uint8_t*, AV_NUM_DATA_POINTERS> outData{};
-                for (size_t i = 0; i < outputChannelBuffers.size(); ++i)
+                for (std::size_t i{}; i < outputChannelBuffers.size(); ++i)
                     outData[i] = reinterpret_cast<uint8_t*>(outputChannelBuffers[i].data());
 
                 // Resample decoded audio
@@ -264,6 +272,11 @@ namespace lms::audio::ffmpeg
     bool PcmDecoder::finished() const
     {
         return _finished;
+    }
+
+    std::chrono::milliseconds PcmDecoder::getEstimatedDuration() const
+    {
+        return _estimatedDuration;
     }
 
     std::size_t PcmDecoder::computeSampleCountPerChannel(std::span<WritableBuffer> outputChannelBuffers) const
@@ -318,8 +331,20 @@ namespace lms::audio::ffmpeg
         {
             if (_inputPacket->stream_index == _inputStreamIndex)
             {
-                const int sendError{ ::avcodec_send_packet(_decoderContext.get(), _inputPacket.get()) };
+                int sendError{ ::avcodec_send_packet(_decoderContext.get(), _inputPacket.get()) };
                 ::av_packet_unref(_inputPacket.get());
+                if (sendError == AVERROR_INVALIDDATA)
+                {
+                    // we may be close to the end of the file, abort gracefully *only* if next packet is EOF
+                    const int peekError{ ::av_read_frame(_context.get(), _inputPacket.get()) };
+                    ::av_packet_unref(_inputPacket.get());
+                    if (peekError == AVERROR_EOF)
+                    {
+                        LMS_LOG(AUDIO, DEBUG, "Invalid data in packet at end of file");
+                        _eof = true;
+                        sendError = 0;
+                    }
+                }
                 if (sendError < 0)
                     throw FFmpegException{ "avcodec_send_packet failed", sendError };
             }
@@ -331,7 +356,7 @@ namespace lms::audio::ffmpeg
     std::size_t PcmDecoder::drainResampler(std::span<WritableBuffer> outputChannelBuffers, std::size_t maxSamplesPerChannel)
     {
         std::array<uint8_t*, AV_NUM_DATA_POINTERS> outData{};
-        for (size_t i = 0; i < outputChannelBuffers.size(); ++i)
+        for (std::size_t i{}; i < outputChannelBuffers.size(); ++i)
             outData[i] = reinterpret_cast<uint8_t*>(outputChannelBuffers[i].data());
 
         const int outSampleCount{ ::swr_convert(_resampleContext.get(),

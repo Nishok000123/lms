@@ -19,33 +19,52 @@
 
 #pragma once
 
+#include <span>
+#include <unordered_map>
+#include <vector>
+
+#include "database/objects/ClusterId.hpp"
+#include "track-selection-constraints/TrackCandidateEvaluator.hpp"
+#include "track-selection-constraints/TrackMetadata.hpp"
+
 #include "IEngine.hpp"
+
+namespace lms::db
+{
+    class Session;
+}
 
 namespace lms::recommendation
 {
-
     class ClusterEngine : public IEngine
     {
     public:
-        ClusterEngine(db::IDb& db)
-            : _db{ db } {}
-
-        ~ClusterEngine() override = default;
+        ClusterEngine(db::IDb& db);
+        ~ClusterEngine() override;
         ClusterEngine(const ClusterEngine&) = delete;
-        ClusterEngine(ClusterEngine&&) = delete;
         ClusterEngine& operator=(const ClusterEngine&) = delete;
-        ClusterEngine& operator=(ClusterEngine&&) = delete;
 
     private:
-        void load(bool /*forceReload*/, const ProgressCallback& /*progressCallback*/) override {}
-        void requestCancelLoad() override {}
+        void load() override;
 
-        TrackContainer findSimilarTracksFromTrackList(db::TrackListId tracklistId, std::size_t maxCount) const override;
-        TrackContainer findSimilarTracks(const std::vector<db::TrackId>& trackIds, std::size_t maxCount) const override;
-        ReleaseContainer getSimilarReleases(db::ReleaseId releaseId, std::size_t maxCount) const override;
-        ArtistContainer getSimilarArtists(db::ArtistId artistId, core::EnumSet<db::TrackArtistLinkType> linkTypes, std::size_t maxCount) const override;
+        TrackResults findSimilarTracksFromTrackList(db::TrackListId tracklistId, std::size_t maxCount) const override;
+        TrackResults findSimilarTracks(std::span<const db::TrackId> trackIds, std::size_t maxCount) const override;
+        TrackResults findTrackSimilarityPath(db::TrackId startTrackId, db::TrackId endTrackId, std::size_t maxCount) const override;
+        ReleaseResults findSimilarReleases(db::ReleaseId releaseId, std::size_t maxCount) const override;
+        ArtistResults findSimilarArtists(db::ArtistId artistId, core::EnumSet<db::TrackArtistLinkType> linkTypes, std::size_t maxCount) const override;
+
+        TrackResults greedySelect(std::vector<db::TrackId> candidates, std::vector<db::TrackId> selectedTracks, std::size_t maxCount) const;
+        void buildTrackMetadata(db::Session& session);
+        void buildTrackClusters(db::Session& session);
+        void buildReleaseClusters();
+        void buildArtistClusters();
 
         db::IDb& _db;
-    };
 
+        TrackMetadataMap _trackMetadata;
+        std::unordered_map<db::TrackId, std::vector<db::ClusterId>> _trackClusters;
+        std::unordered_map<db::ReleaseId, std::vector<db::ClusterId>> _releaseClusters;
+        std::unordered_map<db::ArtistId, std::vector<db::ClusterId>> _artistClusters;
+        TrackCandidateEvaluator _trackEvaluator;
+    };
 } // namespace lms::recommendation

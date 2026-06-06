@@ -36,6 +36,7 @@
 #include "database/objects/TrackLyrics.hpp"
 
 #include "FileScanners.hpp"
+#include "IgnoreRules.hpp"
 #include "JobQueue.hpp"
 #include "ScanContext.hpp"
 #include "ScannerSettings.hpp"
@@ -103,10 +104,12 @@ namespace lms::scanner
                     return false;
                 }
 
-                if (std::none_of(std::cbegin(_settings.mediaLibraries), std::cend(_settings.mediaLibraries),
-                                 [&](const MediaLibraryInfo& libraryInfo) {
-                                     return core::pathUtils::isPathInRootPath(p, libraryInfo.rootDirectory, &excludeDirFileName);
-                                 }))
+                const auto isInActiveLibrary{ [&](const MediaLibraryInfo& lib) {
+                    if (!core::pathUtils::isPathInRootPath(p, lib.rootDirectory))
+                        return false;
+                    return lib.ignoreRules.isEmpty() || !lib.ignoreRules.isIgnored(std::filesystem::relative(p, lib.rootDirectory), IgnoreRules::IsDirectory{ false });
+                } };
+                if (std::none_of(std::cbegin(_settings.mediaLibraries), std::cend(_settings.mediaLibraries), isInActiveLibrary))
                 {
                     LMS_LOG(DBUPDATER, DEBUG, "Removing " << p << ": out of media directory");
                     return false;
@@ -135,7 +138,7 @@ namespace lms::scanner
             constexpr std::size_t writeBatchSize{ 50 };
 
             std::vector<typename Object::IdType> ids;
-            while ((forceFullBatch && objectIdsToRemove.size() >= writeBatchSize) || !objectIdsToRemove.empty())
+            while ((forceFullBatch && objectIdsToRemove.size() >= writeBatchSize) || (!forceFullBatch && !objectIdsToRemove.empty()))
             {
                 for (std::size_t i{}; !objectIdsToRemove.empty() && i < writeBatchSize; ++i)
                 {
@@ -247,7 +250,7 @@ namespace lms::scanner
         };
 
         {
-            JobQueue queue{ getJobScheduler(), 50, processJobsDone, 1, 0.85F };
+            JobQueue queue{ getJobScheduler(), processJobsDone, { .maxQueueSize = 50 } };
 
             ObjectIdType lastCheckedId;
             std::vector<FileToCheck<ObjectIdType>> filesToCheck;

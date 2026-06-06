@@ -36,7 +36,6 @@
 #include "database/objects/TrackArtistLink.hpp"
 #include "database/objects/TrackEmbeddedImage.hpp"
 #include "database/objects/TrackEmbeddedImageLink.hpp"
-#include "database/objects/TrackFeatures.hpp"
 #include "database/objects/TrackLyrics.hpp"
 #include "database/objects/User.hpp"
 
@@ -191,6 +190,20 @@ namespace lms::db
             if (params.fileSize.has_value())
                 query.where("t.file_size = ?").bind(static_cast<long long>(params.fileSize.value()));
 
+            if (params.hasMusicNNEmbeddings.has_value())
+            {
+                if (*params.hasMusicNNEmbeddings)
+                    query.where("EXISTS (SELECT t_m_e.track_id FROM track_musicnn_embeddings t_m_e WHERE t_m_e.track_id = t.id)");
+                else
+                    query.where("NOT EXISTS (SELECT t_m_e.track_id FROM track_musicnn_embeddings t_m_e WHERE t_m_e.track_id = t.id)");
+            }
+
+            if (params.lastTrackId.isValid())
+            {
+                assert(params.sortMethod == TrackSortMethod::Id);
+                query.where("t.id > ?").bind(params.lastTrackId);
+            }
+
             if (params.embeddedImageId.isValid())
             {
                 query.join("track_embedded_image_link t_e_i_l ON t_e_i_l.track_id = t.id");
@@ -322,7 +335,7 @@ namespace lms::db
         });
     }
 
-    void Track::findAbsoluteFilePath(Session& session, TrackId& lastRetrievedId, std::size_t count, const std::function<void(TrackId trackId, const std::filesystem::path& absoluteFilePath)>& func)
+    void Track::findAbsoluteFilePath(Session& session, TrackId& lastRetrievedId, std::size_t count, const TrackLocationVisitor& func)
     {
         session.checkReadTransaction();
 
@@ -331,6 +344,19 @@ namespace lms::db
         utils::forEachQueryResult(query, [&](const auto& res) {
             func(std::get<0>(res), std::get<1>(res));
             lastRetrievedId = std::get<0>(res);
+        });
+    }
+
+    void Track::findAbsoluteFilePath(Session& session, const FindParameters& params, const TrackLocationVisitor& func)
+    {
+        session.checkReadTransaction();
+
+        std::string_view itemToSelect{ "t.id, t.absolute_file_path" };
+
+        auto query{ createQuery<std::tuple<TrackId, std::filesystem::path>>(session, itemToSelect, params) };
+
+        utils::forEachQueryRangeResult(query, params.range, [&](const auto& res) {
+            func(std::get<0>(res), std::get<1>(res));
         });
     }
 
@@ -381,15 +407,6 @@ namespace lms::db
         session.checkReadTransaction();
 
         auto query{ session.getDboSession()->query<TrackId>("SELECT track.id FROM track WHERE mbid in (SELECT mbid FROM track WHERE mbid <> '' GROUP BY mbid HAVING COUNT (*) > 1)").orderBy("track.release_id,track.mbid") };
-
-        return utils::execRangeQuery<TrackId>(query, range);
-    }
-
-    RangeResults<TrackId> Track::findIdsWithRecordingMBIDAndMissingFeatures(Session& session, std::optional<Range> range)
-    {
-        session.checkReadTransaction();
-
-        auto query{ session.getDboSession()->query<TrackId>("SELECT t.id FROM track t").where("LENGTH(t.recording_mbid) > 0").where("NOT EXISTS (SELECT * FROM track_features t_f WHERE t_f.track_id = t.id)") };
 
         return utils::execRangeQuery<TrackId>(query, range);
     }
@@ -490,36 +507,11 @@ namespace lms::db
         utils::forEachQueryRangeResult(query, params.range, moreResults, func);
     }
 
-    RangeResults<TrackId> Track::findSimilarTrackIds(Session& session, const std::vector<TrackId>& tracks, std::optional<Range> range)
+    std::size_t Track::getCount(Session& session, const FindParameters& params)
     {
-        assert(!tracks.empty());
         session.checkReadTransaction();
 
-        std::ostringstream oss;
-        for (std::size_t i{}; i < tracks.size(); ++i)
-        {
-            if (!oss.str().empty())
-                oss << ", ";
-            oss << "?";
-        }
-
-        auto query{ session.getDboSession()->query<TrackId>(
-                                               "SELECT t.id FROM track t"
-                                               " INNER JOIN track_cluster t_c ON t_c.track_id = t.id"
-                                               " AND t_c.cluster_id IN (SELECT DISTINCT c.id FROM cluster c INNER JOIN track_cluster t_c ON t_c.cluster_id = c.id WHERE t_c.track_id IN ("
-                                               + oss.str() + "))"
-                                                             " AND t.id NOT IN ("
-                                               + oss.str() + ")")
-                        .groupBy("t.id")
-                        .orderBy("COUNT(*) DESC, RANDOM()") };
-
-        for (TrackId trackId : tracks)
-            query.bind(trackId);
-
-        for (TrackId trackId : tracks)
-            query.bind(trackId);
-
-        return utils::execRangeQuery<TrackId>(query, range);
+        return utils::fetchQuerySingleResult(createQuery<int>(session, "COUNT(*)", params));
     }
 
     void Track::setAbsoluteFilePath(const std::filesystem::path& filePath)

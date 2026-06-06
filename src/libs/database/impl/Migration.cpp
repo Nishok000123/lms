@@ -35,7 +35,7 @@ namespace lms::db
 {
     namespace
     {
-        static constexpr Version LMS_DATABASE_VERSION{ 103 };
+        static constexpr Version LMS_DATABASE_VERSION{ 105 };
     }
 
     VersionInfo::VersionInfo()
@@ -1706,6 +1706,29 @@ FROM track)");
         utils::executeCommand(*session.getDboSession(), "UPDATE scan_settings SET audio_scan_version = audio_scan_version + 1");
     }
 
+    void migrateFromV103(Session& session)
+    {
+        // Drop previous track_audio_features with a brand new table dedicated to embeddings
+        utils::executeCommand(*session.getDboSession(), R"(DROP TABLE track_features)");
+
+        utils::executeCommand(*session.getDboSession(), R"(CREATE TABLE IF NOT EXISTS "track_musicnn_embeddings" (
+  "id" integer primary key autoincrement,
+  "version" integer not null,
+  "data" blob not null,
+  "track_id" bigint,
+  constraint "fk_track_musicnn_embeddings_track" foreign key ("track_id") references "track" ("id") on delete cascade deferrable initially deferred
+    ))");
+
+        utils::executeCommand(*session.getDboSession(), "ALTER TABLE scan_settings RENAME COLUMN similarity_engine_type TO recommendation_engine_type");
+        utils::executeCommand(*session.getDboSession(), "ALTER TABLE scan_settings ADD COLUMN musicnn_model_identifier TEXT NOT NULL DEFAULT ''");
+    }
+
+    void migrateFromV104(Session& session)
+    {
+        utils::executeCommand(*session.getDboSession(), R"(ALTER TABLE "playlist_file" ADD COLUMN "preferred_artwork_id" bigint)");
+        utils::executeCommand(*session.getDboSession(), R"(ALTER TABLE "playlist_file" ADD COLUMN "cover_image_file" text NOT NULL DEFAULT '')");
+    }
+
     bool doDbMigration(Session& session)
     {
         constexpr std::string_view outdatedMsg{ "Outdated database, please rebuild it (delete the .db file and restart)" };
@@ -1785,6 +1808,8 @@ FROM track)");
             { 100, migrateFromV100 },
             { 101, migrateFromV101 },
             { 102, migrateFromV102 },
+            { 103, migrateFromV103 },
+            { 104, migrateFromV104 },
         };
 
         bool migrationPerformed{};

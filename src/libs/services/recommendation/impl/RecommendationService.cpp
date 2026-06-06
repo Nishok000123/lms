@@ -19,24 +19,51 @@
 
 #include "RecommendationService.hpp"
 
-#include <vector>
+#include <boost/asio/post.hpp>
 
+#include "audio/IMusicNNEmbeddingExtractor.hpp"
 #include "database/IDb.hpp"
 #include "database/Session.hpp"
-#include "database/objects/ScanSettings.hpp"
 
-#include "ClustersEngineCreator.hpp"
-#include "FeaturesEngineCreator.hpp"
+#include "audio-similarity/musicnn/MusicNNEmbeddingEngine.hpp"
+#include "clusters/ClustersEngine.hpp"
 
 namespace lms::recommendation
 {
     namespace
     {
-        db::ScanSettings::SimilarityEngineType getSimilarityEngineType(db::Session& session)
+        db::ScanSettings::RecommendationEngineType getRecommendationEngineType(db::Session& session)
         {
             auto transaction{ session.createReadTransaction() };
+            return db::ScanSettings::find(session)->getRecommendationEngineType();
+        }
 
-            return db::ScanSettings::find(session)->getSimilarityEngineType();
+        EngineType toEngineType(db::ScanSettings::RecommendationEngineType type)
+        {
+            switch (type)
+            {
+            case db::ScanSettings::RecommendationEngineType::None:
+                return EngineType::None;
+            case db::ScanSettings::RecommendationEngineType::Clusters:
+                return EngineType::Clusters;
+            case db::ScanSettings::RecommendationEngineType::AudioSimilarity:
+                return EngineType::AudioSimilarity;
+            }
+            return EngineType::None;
+        }
+
+        std::unique_ptr<IEngine> createEngine(db::ScanSettings::RecommendationEngineType type, db::IDb& db)
+        {
+            switch (type)
+            {
+            case db::ScanSettings::RecommendationEngineType::Clusters:
+                return std::make_unique<ClusterEngine>(db);
+            case db::ScanSettings::RecommendationEngineType::AudioSimilarity:
+                return std::make_unique<MusicNNEmbeddingEngine>(db);
+            case db::ScanSettings::RecommendationEngineType::None:
+                return nullptr;
+            }
+            return nullptr;
         }
     } // namespace
 
@@ -47,75 +74,104 @@ namespace lms::recommendation
 
     RecommendationService::RecommendationService(db::IDb& db)
         : _db{ db }
+        , _ioContextRunner{ _ioContext, 1, "RecommendationEngine" }
     {
-        load();
+        requestReload();
     }
 
-    TrackContainer RecommendationService::findSimilarTracks(db::TrackListId trackListId, std::size_t maxCount) const
+    TrackResults RecommendationService::findSimilarTracks(db::TrackListId trackListId, std::size_t maxCount) const
     {
-        TrackContainer res;
-
-        if (!_engine)
-            return res;
+        std::shared_lock lock{ _mutex, std::try_to_lock };
+        if (!lock || !_engine)
+            return {};
 
         return _engine->findSimilarTracksFromTrackList(trackListId, maxCount);
     }
 
-    TrackContainer RecommendationService::findSimilarTracks(const std::vector<db::TrackId>& trackIds, std::size_t maxCount) const
+    TrackResults RecommendationService::findSimilarTracks(std::span<const db::TrackId> trackIds, std::size_t maxCount) const
     {
-        TrackContainer res;
-
-        if (!_engine)
-            return res;
+        std::shared_lock lock{ _mutex, std::try_to_lock };
+        if (!lock || !_engine)
+            return {};
 
         return _engine->findSimilarTracks(trackIds, maxCount);
     }
 
-    ReleaseContainer RecommendationService::getSimilarReleases(db::ReleaseId releaseId, std::size_t maxCount) const
+    ReleaseResults RecommendationService::findSimilarReleases(db::ReleaseId releaseId, std::size_t maxCount) const
     {
-        ReleaseContainer res;
+        std::shared_lock lock{ _mutex, std::try_to_lock };
+        if (!lock || !_engine)
+            return {};
 
-        if (!_engine)
-            return res;
-
-        return _engine->getSimilarReleases(releaseId, maxCount);
-        ;
+        return _engine->findSimilarReleases(releaseId, maxCount);
     }
 
-    ArtistContainer RecommendationService::getSimilarArtists(db::ArtistId artistId, core::EnumSet<db::TrackArtistLinkType> linkTypes, std::size_t maxCount) const
+    ArtistResults RecommendationService::findSimilarArtists(db::ArtistId artistId, core::EnumSet<db::TrackArtistLinkType> linkTypes, std::size_t maxCount) const
     {
-        ArtistContainer res;
+        std::shared_lock lock{ _mutex, std::try_to_lock };
+        if (!lock || !_engine)
+            return {};
 
-        if (!_engine)
-            return res;
-
-        return _engine->getSimilarArtists(artistId, linkTypes, maxCount);
-
-        return res;
+        return _engine->findSimilarArtists(artistId, linkTypes, maxCount);
     }
 
-    void RecommendationService::load()
+    TrackResults RecommendationService::findTrackSimilarityPath(db::TrackId startTrackId, db::TrackId endTrackId, std::size_t maxCount) const
     {
-        using namespace db;
+        std::shared_lock lock{ _mutex, std::try_to_lock };
+        if (!lock || !_engine)
+            return {};
 
-        switch (getSimilarityEngineType(_db.getTLSSession()))
+        return _engine->findTrackSimilarityPath(startTrackId, endTrackId, maxCount);
+    }
+
+    bool RecommendationService::isEngineTypeSupported(EngineType type) const
+    {
+        switch (type)
         {
-        case ScanSettings::SimilarityEngineType::Clusters:
-            if (_engineType != EngineType::Clusters)
-            {
-                _engineType = EngineType::Clusters;
-                _engine = createClustersEngine(_db);
-            }
-            break;
+        case EngineType::AudioSimilarity:
+            return audio::canExtractMusicNNEmbeddings();
 
-        case ScanSettings::SimilarityEngineType::Features:
-        case ScanSettings::SimilarityEngineType::None:
-            _engineType.reset();
-            _engine.reset();
-            break;
+        case EngineType::None:
+        case EngineType::Clusters:
+            return true;
         }
 
-        if (_engine)
-            _engine->load(false);
+        return false;
+    }
+
+    db::ScanSettings::RecommendationEngineType RecommendationService::prepareReload()
+    {
+        const auto type{ getRecommendationEngineType(_db.getTLSSession()) };
+        std::unique_lock lock{ _mutex };
+        _engineType = toEngineType(type);
+        _engine.reset();
+        return type;
+    }
+
+    EngineType RecommendationService::getEngineType() const
+    {
+        std::shared_lock lock{ _mutex };
+        return _engineType;
+    }
+
+    void RecommendationService::requestReload()
+    {
+        const auto type{ prepareReload() };
+
+        boost::asio::post(_ioContext, [this, type] {
+            auto newEngine{ createEngine(type, _db) };
+            if (!newEngine)
+                return;
+            newEngine->load();
+
+            std::unique_lock lock{ _mutex };
+            _engine = std::move(newEngine);
+        });
+    }
+
+    bool RecommendationService::isLoaded() const
+    {
+        std::shared_lock lock{ _mutex, std::try_to_lock };
+        return lock && _engine != nullptr;
     }
 } // namespace lms::recommendation

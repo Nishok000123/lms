@@ -20,7 +20,7 @@
 #pragma once
 
 #include <memory>
-#include <vector>
+#include <span>
 
 #include "core/EnumSet.hpp"
 
@@ -37,17 +37,29 @@ namespace lms::db
 
 namespace lms::recommendation
 {
+    enum class EngineType
+    {
+        None,
+        Clusters,
+        AudioSimilarity,
+    };
+
     class IRecommendationService
     {
     public:
         virtual ~IRecommendationService() = default;
 
-        virtual void load() = 0;
+        virtual bool isEngineTypeSupported(EngineType type) const = 0;
 
-        virtual TrackContainer findSimilarTracks(db::TrackListId tracklistId, std::size_t maxCount) const = 0;
-        virtual TrackContainer findSimilarTracks(const std::vector<db::TrackId>& tracksId, std::size_t maxCount) const = 0;
-        virtual ReleaseContainer getSimilarReleases(db::ReleaseId releaseId, std::size_t maxCount) const = 0;
-        virtual ArtistContainer getSimilarArtists(db::ArtistId artistId, core::EnumSet<db::TrackArtistLinkType> linkTypes, std::size_t maxCount) const = 0;
+        virtual void requestReload() = 0;
+        virtual bool isLoaded() const = 0;
+        virtual EngineType getEngineType() const = 0;
+
+        virtual TrackResults findSimilarTracks(db::TrackListId tracklistId, std::size_t maxCount) const = 0;
+        virtual TrackResults findSimilarTracks(std::span<const db::TrackId> tracksId, std::size_t maxCount) const = 0;
+        virtual ReleaseResults findSimilarReleases(db::ReleaseId releaseId, std::size_t maxCount) const = 0;
+        virtual ArtistResults findSimilarArtists(db::ArtistId artistId, core::EnumSet<db::TrackArtistLinkType> linkTypes, std::size_t maxCount) const = 0;
+        virtual TrackResults findTrackSimilarityPath(db::TrackId startTrackId, db::TrackId endTrackId, std::size_t maxCount) const = 0;
     };
 
     std::unique_ptr<IRecommendationService> createRecommendationService(db::IDb& db);

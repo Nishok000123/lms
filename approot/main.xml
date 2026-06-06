@@ -58,7 +58,16 @@
 						</a>
 						<ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
 							<li class="dropdown-header">${username}</li>
-							<li>${settings class="dropdown-item"}</li>
+							<li>${settings-ui class="dropdown-item"}</li>
+							<li>${settings-audio class="dropdown-item"}</li>
+							${<if-has-subsonic-api-menu>}
+							<li>${settings-subsonic class="dropdown-item"}</li>
+							${</if-has-subsonic-api-menu>}
+							<li>${settings-services class="dropdown-item"}</li>
+							${<if-has-change-password-menu>}
+							<li>${settings-password class="dropdown-item"}</li>
+							${</if-has-change-password-menu>}
+							<li class="dropdown-divider"></li>
 							<li>${logout class="dropdown-item"}</li>
 						</ul>
 					</li>

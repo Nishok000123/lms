@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<messages xmlns:if="Wt.WTemplate.conditions">
+
+<message id="Lms.Settings.audio.template">
+	<form class="row g-3">
+		<legend>${tr:Lms.Settings.audio}
+			<button type="button" class="btn btn-sm p-0" data-bs-toggle="tooltip" data-bs-placement="right" title="${tr:Lms.Settings.audio-settings-are-local}">
+				<i class="fa fa-fw fa-info-circle" aria-hidden="true"></i>
+			</button>
+		</legend>
+		<div class="col-lg-4">
+			<label class="form-label" for="${id:transcoding-mode}">
+				${tr:Lms.Settings.transcoding-mode}
+			</label>
+			${transcoding-mode class="form-control"}
+			<div class="invalid-feedback">
+				${transcoding-mode-info}
+			</div>
+		</div>
+		<div class="col-lg-4">
+			<label class="form-label" for="${id:transcoding-output-format}">
+				${tr:Lms.Settings.transcoding-output-format}
+			</label>
+			${transcoding-output-format class="form-control"}
+			<div class="invalid-feedback">
+				${transcoding-output-format-info}
+			</div>
+		</div>
+		<div class="col-lg-4">
+			<label class="form-label" for="${id:transcoding-output-bitrate}">
+				${tr:Lms.Settings.transcoding-output-bitrate}
+			</label>
+			<div class="input-group mb-3">
+				${transcoding-output-bitrate class="form-control"}
+				<span class="input-group-text">kbps</span>
+			</div>
+			<div class="invalid-feedback">
+				${transcoding-output-bitrate-info}
+			</div>
+		</div>
+		<div class="col-lg-4">
+			<label class="form-label" for="${id:replaygain-mode}">
+				${tr:Lms.Settings.replaygain-mode}
+			</label>
+			${replaygain-mode class="form-control"}
+			<div class="invalid-feedback">
+				${replaygain-mode-info}
+			</div>
+		</div>
+		<div class="col-lg-4">
+			<label class="form-label" for="${id:replaygain-preamp}">
+				${tr:Lms.Settings.replaygain-preamp}
+			</label>
+			<div class="input-group mb-3">
+				${replaygain-preamp class="form-control"}
+				<span class="input-group-text">dB</span>
+				<div class="invalid-feedback">
+					${replaygain-preamp-info}
+				</div>
+			</div>
+		</div>
+		<div class="col-lg-4">
+			<label class="form-label" for="${id:replaygain-preamp-no-rg-info}">
+				${tr:Lms.Settings.replaygain-preamp-no-rg-info}
+			</label>
+			<div class="input-group mb-3">
+				${replaygain-preamp-no-rg-info class="form-control"}
+				<span class="input-group-text">dB</span>
+				<div class="invalid-feedback">
+					${replaygain-preamp-no-rg-info-info}
+				</div>
+			</div>
+		</div>
+	</form>
+	<hr/>
+	${save-btn class="btn btn-primary me-1"}${discard-btn class="btn btn-secondary"}
+</message>
+
+</messages>

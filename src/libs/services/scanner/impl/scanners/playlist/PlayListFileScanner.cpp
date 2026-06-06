@@ -97,6 +97,7 @@ namespace lms::scanner
             else
                 playList.modify()->setName(getFilePath().stem().string());
             playList.modify()->setFiles(_parsedPlayList->files);
+            playList.modify()->setCoverImageFile(_parsedPlayList->coverImage.value_or(std::filesystem::path{}));
 
             db::MediaLibrary::pointer mediaLibrary{ db::MediaLibrary::find(dbSession, getMediaLibrary().id) }; // may be null if settings are updated in // => next scan will correct this
             playList.modify()->setDirectory(utils::getOrCreateDirectory(dbSession, getFilePath().parent_path(), mediaLibrary));
@@ -106,11 +107,9 @@ namespace lms::scanner
                 LMS_LOG(DBUPDATER, DEBUG, "Added playlist file " << getFilePath());
                 return OperationResult::Added;
             }
-            else
-            {
-                LMS_LOG(DBUPDATER, DEBUG, "Updated playlist file '" << getFilePath());
-                return OperationResult::Updated;
-            }
+
+            LMS_LOG(DBUPDATER, DEBUG, "Updated playlist file '" << getFilePath());
+            return OperationResult::Updated;
         }
     } // namespace
 

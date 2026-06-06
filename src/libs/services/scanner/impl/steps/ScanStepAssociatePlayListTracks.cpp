@@ -147,7 +147,7 @@ namespace lms::scanner
         {
             constexpr std::size_t writeBatchSize{ 5 };
 
-            while ((forceFullBatch && playListFileAssociations.size() >= writeBatchSize) || !playListFileAssociations.empty())
+            while ((forceFullBatch && playListFileAssociations.size() >= writeBatchSize) || (!forceFullBatch && !playListFileAssociations.empty()))
             {
                 auto transaction{ session.createWriteTransaction() };
 
@@ -291,7 +291,7 @@ namespace lms::scanner
         };
 
         {
-            JobQueue queue{ getJobScheduler(), 20, processJobsDone, 1, 0.85F };
+            JobQueue queue{ getJobScheduler(), processJobsDone };
 
             db::PlayListFileId lastPlayListFileId;
             db::IdRange<db::PlayListFileId> playListFileIdRange;

@@ -32,14 +32,19 @@ namespace lms::core
 
 namespace lms::scanner
 {
+    struct JobQueueParameters
+    {
+        std::size_t maxQueueSize = 20;
+        std::size_t processBatchSize = 1; // processBatchSize -> how many jobs done to notify at once using processJobsDoneFunc
+        float drainThreshold = 0.85F;     // drainThreshold: fraction of maxQueueSize at which completed jobs are processed
+    };
+
     class JobQueue
     {
     public:
         using ProcessFunction = std::function<void(std::span<std::unique_ptr<core::IJob>>)>;
 
-        // processBatchSize -> how many jobs done to notify at once using processJobsDoneFunc
-        // drainThreshold: fraction of maxQueueSize at which completed jobs are processed
-        JobQueue(core::IJobScheduler& scheduler, std::size_t maxQueueSize, ProcessFunction processJobsDoneFunc, std::size_t processBatchSize, float drainThreshold);
+        JobQueue(core::IJobScheduler& scheduler, ProcessFunction processJobsDoneFunc, JobQueueParameters params = {});
         ~JobQueue();
         JobQueue(const JobQueue&) = delete;
         JobQueue& operator=(const JobQueue&) = delete;

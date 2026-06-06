@@ -20,6 +20,7 @@
 #pragma once
 
 #include <filesystem>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -28,6 +29,7 @@ namespace lms::scanner
     struct PlayList
     {
         std::string name;
+        std::optional<std::filesystem::path> coverImage;
         std::vector<std::filesystem::path> files;
     };
 } // namespace lms::scanner

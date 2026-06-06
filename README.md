@@ -40,7 +40,9 @@ _LMS_ provides several ways to help you find the music you like:
   * Starred _Jazz_ albums
   * ...
 
-__Note__: depending on your database size and/or your hardware, the tag-based recommendation engine may significantly slow down the user interface. You can disable it in the administration settings.
+__Note__: the recommendation engine supports two modes:
+* **Tag-based**: uses metadata tags `genre` and `grouping`.
+* **Audio similarity**: uses MusicNN embeddings. Extraction throughput depends heavily on both the number of scanner threads and the speed of your storage. Typical reported speeds range from ~1k tracks/hour on a Raspberry Pi 4 (3 threads) to ~25k tracks/hour on an Intel Core i5-13500 (10 threads). To speed up extraction, consider tweaking `scanner-thread-count` in `lms.conf` (defaults to half the number of logical CPUs).
 
 ## About tags
 _LMS_ primarily relies on tags to organize your music collection but also supports browsing by directory using the [Subsonic/OpenSubsonic API](SUBSONIC.md).
@@ -52,6 +54,21 @@ The folder must follow a structure defined by Kodi, as detailed [here](https://k
 
 The canonical artist name used by _LMS_ is the one specified in the `artist.nfo` file; If an `artist.nfo` exists but does not provide a name, the name of the containing folder is used.
 If no artist info file is provided, _LMS_ will pick the artist name found on the latest release.
+
+## Excluding files from scan
+Place a `.lmsignore` file at the root of a media library to exclude files or directories from scanning.
+
+The file uses a gitignore-inspired reduced syntax:
+* `*.jpg`: ignore all `.jpg` files at any depth
+* `/Unsorted/`: ignore the top-level `Unsorted/` directory only
+* `extras/`: ignore any `extras/` directory at any depth
+* `!cover.jpg`: re-include a file previously matched by a broader rule
+* `?`: matches any single character except `/`
+* `[abc]`: character class
+
+Lines starting with `#` are comments. An empty file has no effect.
+
+__Note__: only one `.lmsignore` file per library root is supported; files placed in subdirectories are ignored.
 
 ### Filtering
 It is possible to apply global filters on your collection using `genre`, `mood`, `grouping`, `language`, `codec`, and by music library. More tags, including custom ones, can be added in the database administration settings.
@@ -104,6 +121,12 @@ _LMS_ automatically associates images with each disc in your collection. Name th
 
 ## Playlist support
 _LMS_ supports playlist files in `m3u` and `m3u8` formats. These playlists are synced during the scan process and are available as public shared playlists.
+
+### Playlist image lookup
+_LMS_ resolves a playlist's cover image in this order:
+1. **`#EXTIMG:` directive**. An explicit path declared inside the playlist file (URLs are ignored).
+2. **Same-name image file**. An image file in the same directory as the playlist that shares the playlist's filename stem.
+3. **First track's artwork** – if neither of the above is found, the artwork of the first track in the playlist is used as a fallback.
 
 ## Lyrics support
 _LMS_ supports lyrics in `lrc` files, `txt` files, and embedded track metadata. Both synchronized and unsynchronized lyrics are supported.

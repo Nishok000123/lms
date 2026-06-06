@@ -19,8 +19,14 @@
 
 #pragma once
 
-#include <optional>
+#include <memory>
+#include <shared_mutex>
 
+#include <boost/asio/io_context.hpp>
+
+#include "core/IOContextRunner.hpp"
+
+#include "database/objects/ScanSettings.hpp"
 #include "services/recommendation/IRecommendationService.hpp"
 
 #include "IEngine.hpp"
@@ -32,12 +38,6 @@ namespace lms::db
 
 namespace lms::recommendation
 {
-    enum class EngineType
-    {
-        Clusters,
-        Features,
-    };
-
     class RecommendationService : public IRecommendationService
     {
     public:
@@ -47,20 +47,26 @@ namespace lms::recommendation
         RecommendationService& operator=(const RecommendationService&) = delete;
 
     private:
-        void load() override;
+        bool isEngineTypeSupported(EngineType type) const override;
 
-        TrackContainer findSimilarTracks(db::TrackListId tracklistId, std::size_t maxCount) const override;
-        TrackContainer findSimilarTracks(const std::vector<db::TrackId>& trackIds, std::size_t maxCount) const override;
-        ReleaseContainer getSimilarReleases(db::ReleaseId releaseId, std::size_t maxCount) const override;
-        ArtistContainer getSimilarArtists(db::ArtistId artistId, core::EnumSet<db::TrackArtistLinkType> linkTypes, std::size_t maxCount) const override;
+        void requestReload() override;
+        bool isLoaded() const override;
+        EngineType getEngineType() const override;
 
-        void setEnginePriorities(const std::vector<EngineType>& engineTypes);
-        void clearEngines();
-        void loadPendingEngine(EngineType engineType, std::unique_ptr<IEngine> engine, bool forceReload, const ProgressCallback& progressCallback);
+        TrackResults findSimilarTracks(db::TrackListId tracklistId, std::size_t maxCount) const override;
+        TrackResults findSimilarTracks(std::span<const db::TrackId> trackIds, std::size_t maxCount) const override;
+        ReleaseResults findSimilarReleases(db::ReleaseId releaseId, std::size_t maxCount) const override;
+        ArtistResults findSimilarArtists(db::ArtistId artistId, core::EnumSet<db::TrackArtistLinkType> linkTypes, std::size_t maxCount) const override;
+        TrackResults findTrackSimilarityPath(db::TrackId startTrackId, db::TrackId endTrackId, std::size_t maxCount) const override;
+
+        db::ScanSettings::RecommendationEngineType prepareReload();
 
         db::IDb& _db;
-        std::optional<EngineType> _engineType;
+        mutable std::shared_mutex _mutex;
+        EngineType _engineType{ EngineType::None };
         std::unique_ptr<IEngine> _engine;
+        boost::asio::io_context _ioContext;
+        core::IOContextRunner _ioContextRunner;
     };
 
 } // namespace lms::recommendation

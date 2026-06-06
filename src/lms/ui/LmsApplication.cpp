@@ -32,13 +32,13 @@
 #include "core/Service.hpp"
 
 #include "database/IDb.hpp"
-#include "database/IQueryPlanRecorder.hpp"
 #include "database/Session.hpp"
 #include "database/objects/Artist.hpp"
 #include "database/objects/Cluster.hpp"
 #include "database/objects/Release.hpp"
 #include "database/objects/TrackList.hpp"
 #include "database/objects/User.hpp"
+#include "database/profiling/IQueryProfiler.hpp"
 #include "services/artwork/IArtworkService.hpp"
 #include "services/auth/IAuthTokenService.hpp"
 #include "services/auth/IEnvService.hpp"
@@ -53,20 +53,16 @@
 #include "ModalManager.hpp"
 #include "NotificationContainer.hpp"
 #include "PlayQueue.hpp"
-#include "SettingsView.hpp"
 #include "admin/About.hpp"
-#include "admin/DebugToolsView.hpp"
+#include "admin/AdminView.hpp"
 #include "admin/InitWizardView.hpp"
-#include "admin/MediaLibrariesView.hpp"
-#include "admin/ScanSettingsView.hpp"
-#include "admin/ScannerController.hpp"
-#include "admin/UserView.hpp"
-#include "admin/UsersView.hpp"
+#include "common/PathRouter.hpp"
 #include "common/Template.hpp"
 #include "explore/Explore.hpp"
 #include "explore/Filters.hpp"
 #include "resource/ArtworkResource.hpp"
 #include "resource/AudioTranscodingResource.hpp"
+#include "settings/SettingsView.hpp"
 
 namespace lms::ui
 {
@@ -103,7 +99,11 @@ namespace lms::ui
             res->use(appRoot + "playqueue");
             res->use(appRoot + "release");
             res->use(appRoot + "releases");
-            res->use(appRoot + "settings");
+            res->use(appRoot + "settings-audio");
+            res->use(appRoot + "settings-password");
+            res->use(appRoot + "settings-services");
+            res->use(appRoot + "settings-subsonic");
+            res->use(appRoot + "settings-ui");
             res->use(appRoot + "tracklist");
             res->use(appRoot + "tracklists");
             res->use(appRoot + "tracks");
@@ -129,65 +129,6 @@ namespace lms::ui
             return locale;
         }
 
-        enum IdxRoot
-        {
-            IdxExplore = 0,
-            IdxPlayQueue,
-            IdxSettings,
-            IdxAdminLibraries,
-            IdxAdminScanSettings,
-            IdxAdminScanner,
-            IdxAdminUsers,
-            IdxAdminUser,
-            IdxAdminDebugTools,
-        };
-
-        void handlePathChange(Wt::WStackedWidget& stack, bool isAdmin)
-        {
-            static const struct
-            {
-                std::string path;
-                int index;
-                bool admin;
-                std::optional<Wt::WString> title;
-            } views[] = {
-                { "/artists", IdxExplore, false, Wt::WString::tr("Lms.Explore.artists") },
-                { "/artist", IdxExplore, false, std::nullopt },
-                { "/releases", IdxExplore, false, Wt::WString::tr("Lms.Explore.releases") },
-                { "/release", IdxExplore, false, std::nullopt },
-                { "/tracks", IdxExplore, false, Wt::WString::tr("Lms.Explore.tracks") },
-                { "/tracklists", IdxExplore, false, Wt::WString::tr("Lms.Explore.tracklists") },
-                { "/tracklist", IdxExplore, false, std::nullopt },
-                { "/playqueue", IdxPlayQueue, false, Wt::WString::tr("Lms.PlayQueue.playqueue") },
-                { "/settings", IdxSettings, false, Wt::WString::tr("Lms.Settings.settings") },
-                { "/admin/libraries", IdxAdminLibraries, true, Wt::WString::tr("Lms.Admin.MediaLibraries.media-libraries") },
-                { "/admin/scan-settings", IdxAdminScanSettings, true, Wt::WString::tr("Lms.Admin.Database.scan-settings") },
-                { "/admin/scanner", IdxAdminScanner, true, Wt::WString::tr("Lms.Admin.ScannerController.scanner") },
-                { "/admin/users", IdxAdminUsers, true, Wt::WString::tr("Lms.Admin.Users.users") },
-                { "/admin/user", IdxAdminUser, true, std::nullopt },
-                { "/admin/debug-tools", IdxAdminDebugTools, true, Wt::WString::tr("Lms.Admin.DebugTools.debug-tools") },
-            };
-
-            LMS_LOG(UI, DEBUG, "Internal path changed to '" << wApp->internalPath() << "'");
-
-            for (const auto& view : views)
-            {
-                if (wApp->internalPathMatches(view.path))
-                {
-                    if (view.admin && !isAdmin)
-                        break;
-
-                    stack.setCurrentIndex(view.index);
-                    if (view.title)
-                        LmsApp->setTitle(*view.title);
-
-                    LmsApp->doJavaScript(LmsApp->javaScriptClass() + ".updateActiveNav('" + view.path + "')");
-                    return;
-                }
-            }
-
-            wApp->setInternalPath(defaultPath, true);
-        }
     } // namespace
 
     std::unique_ptr<Wt::WApplication> LmsApplication::create(const Wt::WEnvironment& env, db::IDb& db, LmsApplicationManager& appManager, AuthenticationBackend authBackend)
@@ -459,7 +400,21 @@ namespace lms::ui
 
         Filters* filters{ navbar->bindNew<Filters>("filters") };
         navbar->bindString("username", std::string{ getUserLoginName() }, Wt::TextFormat::Plain);
-        navbar->bindNew<Wt::WAnchor>("settings", Wt::WLink{ Wt::LinkType::InternalPath, "/settings" }, Wt::WString::tr("Lms.Settings.menu-settings"));
+
+        navbar->bindNew<Wt::WAnchor>("settings-ui", Wt::WLink{ Wt::LinkType::InternalPath, "/settings/ui" }, Wt::WString::tr("Lms.Settings.menu-ui"));
+        navbar->bindNew<Wt::WAnchor>("settings-audio", Wt::WLink{ Wt::LinkType::InternalPath, "/settings/audio" }, Wt::WString::tr("Lms.Settings.menu-audio"));
+        if (core::Service<core::IConfig>::get()->getBool("api-subsonic", true))
+        {
+            navbar->setCondition("if-has-subsonic-api-menu", true);
+            navbar->bindNew<Wt::WAnchor>("settings-subsonic", Wt::WLink{ Wt::LinkType::InternalPath, "/settings/subsonic" }, Wt::WString::tr("Lms.Settings.menu-subsonic"));
+        }
+        navbar->bindNew<Wt::WAnchor>("settings-services", Wt::WLink{ Wt::LinkType::InternalPath, "/settings/services" }, Wt::WString::tr("Lms.Settings.menu-services"));
+
+        if (getAuthBackend() == AuthenticationBackend::Internal)
+        {
+            navbar->setCondition("if-has-change-password-menu", true);
+            navbar->bindNew<Wt::WAnchor>("settings-password", Wt::WLink{ Wt::LinkType::InternalPath, "/settings/password" }, Wt::WString::tr("Lms.Settings.menu-password"));
+        }
 
         {
             Wt::WAnchor* logout{ navbar->bindNew<Wt::WAnchor>("logout") };
@@ -480,33 +435,29 @@ namespace lms::ui
             navbar->bindNew<Wt::WAnchor>("users", Wt::WLink{ Wt::LinkType::InternalPath, "/admin/users" }, Wt::WString::tr("Lms.Admin.menu-users"));
             // Hide the entry if no debug service is enabled
             if (core::Service<core::tracing::ITraceLogger>::get()
-                || core::Service<db::IQueryPlanRecorder>::get())
+                || core::Service<db::IQueryProfiler>::get())
             {
                 navbar->setCondition("if-debug-tools", true);
                 navbar->bindNew<Wt::WAnchor>("debug-tools", Wt::WLink{ Wt::LinkType::InternalPath, "/admin/debug-tools" }, Wt::WString::tr("Lms.Admin.menu-debug-tools"));
             }
         }
 
-        // Contents
-        // Order is important in mainStack, see IdxRoot!
-        Wt::WStackedWidget* mainStack{ main->bindNew<Wt::WStackedWidget>("contents") };
-        mainStack->setOverflow(Wt::Overflow::Visible); // wt makes it hidden by default
+        PathRouter* mainRouter{ main->bindNew<PathRouter>("contents") };
 
-        std::unique_ptr<PlayQueue> playQueue{ std::make_unique<PlayQueue>() };
-        Explore* explore{ mainStack->addNew<Explore>(*filters, *playQueue) };
-        _playQueue = mainStack->addWidget(std::move(playQueue));
-        mainStack->addNew<SettingsView>();
+        _playQueue = mainRouter->add<PlayQueue>("/playqueue", Wt::WString::tr("Lms.PlayQueue.playqueue"));
 
-        // Admin stuff
+        Explore* explore{ mainRouter->add<Explore>("/artists", Wt::WString::tr("Lms.Explore.artists"), *filters, *_playQueue) };
+        mainRouter->addRoute("/artist", std::nullopt, explore);
+        mainRouter->addRoute("/releases", Wt::WString::tr("Lms.Explore.releases"), explore);
+        mainRouter->addRoute("/release", std::nullopt, explore);
+        mainRouter->addRoute("/tracks", Wt::WString::tr("Lms.Explore.tracks"), explore);
+        mainRouter->addRoute("/tracklists", Wt::WString::tr("Lms.Explore.tracklists"), explore);
+        mainRouter->addRoute("/tracklist", std::nullopt, explore);
+
+        mainRouter->add<SettingsView>("/settings", std::nullopt);
+
         if (getUserType() == db::UserType::ADMIN)
-        {
-            mainStack->addNew<MediaLibrariesView>();
-            mainStack->addNew<ScanSettingsView>();
-            mainStack->addNew<ScannerController>();
-            mainStack->addNew<UsersView>();
-            mainStack->addNew<UserView>();
-            mainStack->addNew<DebugToolsView>();
-        }
+            mainRouter->add<AdminView>("/admin", std::nullopt);
 
         explore->getPlayQueueController().setMaxTrackCountToEnqueue(_playQueue->getCapacity());
 
@@ -564,11 +515,17 @@ namespace lms::ui
             });
         }
 
-        internalPathChanged().connect(mainStack, [=] {
-            handlePathChange(*mainStack, isAdmin);
+        internalPathChanged().connect([this] {
+            LMS_LOG(UI, DEBUG, "Internal path changed to '" << wApp->internalPath() << "'");
+            doJavaScript(javaScriptClass() + ".updateActiveNav('" + wApp->internalPath() + "')");
         });
 
-        handlePathChange(*mainStack, isAdmin);
+        mainRouter->noMatch().connect([] {
+            wApp->setInternalPath(defaultPath, true);
+        });
+
+        mainRouter->activate();
+        doJavaScript(javaScriptClass() + ".updateActiveNav('" + wApp->internalPath() + "')");
     }
 
     void LmsApplication::notify(const Wt::WEvent& event)

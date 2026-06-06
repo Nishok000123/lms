@@ -42,6 +42,7 @@
 #include "steps/ScanStepAssociateArtistImages.hpp"
 #include "steps/ScanStepAssociateExternalLyrics.hpp"
 #include "steps/ScanStepAssociateMediumImages.hpp"
+#include "steps/ScanStepAssociatePlayListImages.hpp"
 #include "steps/ScanStepAssociatePlayListTracks.hpp"
 #include "steps/ScanStepAssociateReleaseImages.hpp"
 #include "steps/ScanStepAssociateTrackImages.hpp"
@@ -49,6 +50,7 @@
 #include "steps/ScanStepCheckForRemovedFiles.hpp"
 #include "steps/ScanStepCompact.hpp"
 #include "steps/ScanStepComputeClusterStats.hpp"
+#include "steps/ScanStepExtractMusicNNEmbeddings.hpp"
 #include "steps/ScanStepOptimize.hpp"
 #include "steps/ScanStepRemoveOrphanedDbEntries.hpp"
 #include "steps/ScanStepScanFiles.hpp"
@@ -106,6 +108,7 @@ namespace lms::scanner
                 info.firstScan = mediaLibrary->isEmpty();
                 info.id = mediaLibrary->getId();
                 info.rootDirectory = mediaLibrary->getPath().lexically_normal();
+                info.ignoreRules = loadIgnoreRules(info.rootDirectory / ".lmsignore");
 
                 settings->mediaLibraries.push_back(info);
             });
@@ -122,6 +125,10 @@ namespace lms::scanner
             settings->skipSingleReleasePlayLists = scanSettings->getSkipSingleReleasePlayLists();
             settings->allowArtistMBIDFallback = scanSettings->getAllowMBIDArtistMerge();
             settings->artistImageFallbackToRelease = scanSettings->getArtistImageFallbackToReleaseField();
+
+            settings->extractMusicNNEmbeddings = scanSettings->getRecommendationEngineType() == db::ScanSettings::RecommendationEngineType::AudioSimilarity;
+            settings->musicnnModelPath = core::Service<core::IConfig>::get()->getPath("musicnn-model-path", "/usr/share/lms/models/MSD_musicnn_embedding.onnx");
+            settings->musicnnMaxPatchCountPerTrack = core::Service<core::IConfig>::get()->getULong("musicnn-max-patch-count-per-track", 20);
 
             // TODO, store this in DB + expose in UI
             settings->skipDuplicateTrackMBID = core::Service<core::IConfig>::get()->getBool("scanner-skip-duplicate-mbid", false);
@@ -164,6 +171,8 @@ namespace lms::scanner
         , _jobScheduler{ core::createJobScheduler("Scanner", getScannerThreadCount()) }
         , _cachePath{ cachePath }
     {
+        LMS_LOG(DBUPDATER, INFO, "Starting service...");
+
         _ioService.setThreadCount(1);
 
         LMS_LOG(DBUPDATER, INFO, "Using " << _jobScheduler->getThreadCount() << " thread(s) for jobs");
@@ -186,6 +195,8 @@ namespace lms::scanner
         refreshScanSettings();
 
         start();
+
+        LMS_LOG(DBUPDATER, INFO, "Service started!");
     }
 
     ScannerService::~ScannerService()
@@ -389,7 +400,7 @@ namespace lms::scanner
         }
 
         refreshTracingLoggerStats();
-        LMS_LOG(DBUPDATER, INFO, "Scan " << (_abortScan ? "aborted" : "complete") << ". Changes = " << stats.getChangesCount() << " (added = " << stats.additions << ", removed = " << stats.deletions << ", updated = " << stats.updates << ", failures = " << stats.failures << "), Not changed = " << stats.skips << ", Scanned = " << stats.scans << " (errors = " << stats.errorsCount << "), features fetched = " << stats.featuresFetched << ",  duplicates = " << stats.duplicates.size());
+        LMS_LOG(DBUPDATER, INFO, "Scan " << (_abortScan ? "aborted" : "complete") << ". Changes = " << stats.getChangesCount() << " (added = " << stats.additions << ", removed = " << stats.deletions << ", updated = " << stats.updates << ", failures = " << stats.failures << "), Not changed = " << stats.skips << ", Scanned = " << stats.scans << " (errors = " << stats.errorsCount << "), audio features extracted = " << stats.featureExtractions << ",  duplicates = " << stats.duplicates.size());
 
         {
             auto transaction{ _db.getTLSSession().createReadTransaction() };
@@ -507,6 +518,7 @@ namespace lms::scanner
         _scanSteps.emplace_back(std::make_unique<ScanStepCheckForRemovedFiles>(params));
         _scanSteps.emplace_back(std::make_unique<ScanStepArtistReconciliation>(params));
         _scanSteps.emplace_back(std::make_unique<ScanStepAssociatePlayListTracks>(params));
+        _scanSteps.emplace_back(std::make_unique<ScanStepAssociatePlayListImages>(params));
         _scanSteps.emplace_back(std::make_unique<ScanStepUpdateLibraryFields>(params));
         _scanSteps.emplace_back(std::make_unique<ScanStepAssociateReleaseImages>(params));
         _scanSteps.emplace_back(std::make_unique<ScanStepAssociateArtistImages>(params)); // must come after ScanStepAssociateReleaseImages (because and artist image can fallback on a release image)
@@ -518,6 +530,10 @@ namespace lms::scanner
         _scanSteps.emplace_back(std::make_unique<ScanStepOptimize>(params));
         _scanSteps.emplace_back(std::make_unique<ScanStepComputeClusterStats>(params));
         _scanSteps.emplace_back(std::make_unique<ScanStepCheckForDuplicatedFiles>(params));
+
+        // Audio extraction scan step must be last as it is the most long running
+        if (_settings.extractMusicNNEmbeddings)
+            _scanSteps.emplace_back(std::make_unique<ScanStepExtractMusicNNEmbeddings>(params, _settings.musicnnModelPath, _settings.musicnnMaxPatchCountPerTrack));
     }
 
     void ScannerService::notifyInProgress(const ScanStepStats& stepStats)

@@ -31,8 +31,6 @@
 
 namespace lms::scanner
 {
-    static inline const std::filesystem::path excludeDirFileName{ ".lmsignore" };
-
     struct ScannerSettings
     {
         std::size_t audioScanVersion{};
@@ -47,6 +45,9 @@ namespace lms::scanner
         bool skipSingleReleasePlayLists{};
         bool allowArtistMBIDFallback{ true };
         bool artistImageFallbackToRelease{};
+        bool extractMusicNNEmbeddings{};
+        std::filesystem::path musicnnModelPath;
+        std::size_t musicnnMaxPatchCountPerTrack{};
 
         std::vector<MediaLibraryInfo> mediaLibraries;
 

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<messages xmlns:if="Wt.WTemplate.conditions">
+
+<message id="Lms.Settings.ui.template">
+	<form class="row g-3">
+		<legend>${tr:Lms.Settings.user-interface}</legend>
+		<div class="col-12">
+			<label class="form-label" for="${id:artist-release-sort-method}">
+				${tr:Lms.Settings.artist-release-sort-method}
+			</label>
+			${artist-release-sort-method class="form-control"}
+			<div class="invalid-feedback">
+				${artist-release-sort-method-info}
+			</div>
+		</div>
+		<div class="col-12">
+			<div class="form-check">
+				${enable-inline-artist-relationships class="form-check-input"}
+				<label class="form-check-label" for="${id:enable-inline-artist-relationships}">
+					${tr:Lms.Settings.enable-inline-artist-relationships}
+				</label>
+				<div class="invalid-feedback">
+					${enable-inline-artist-relationships}
+				</div>
+			</div>
+		</div>
+		<div class="col-12">
+			<label class="form-label" for="${id:inline-artist-relationships}">
+				${tr:Lms.Settings.inline-artist-relationships}
+			</label>
+			${inline-artist-relationships class="form-control"}
+			<div class="invalid-feedback">
+				${inline-artist-relationships-info}
+			</div>
+		</div>
+	</form>
+	<hr/>
+	${save-btn class="btn btn-primary me-1"}${discard-btn class="btn btn-secondary"}
+</message>
+
+</messages>

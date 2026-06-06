@@ -128,7 +128,7 @@ namespace lms::scanner
         {
             constexpr std::size_t writeBatchSize{ 50 };
 
-            while ((forceFullBatch && imageAssociations.size() >= writeBatchSize) || !imageAssociations.empty())
+            while ((forceFullBatch && imageAssociations.size() >= writeBatchSize) || (!forceFullBatch && !imageAssociations.empty()))
             {
                 auto transaction{ session.createWriteTransaction() };
 
@@ -250,7 +250,7 @@ namespace lms::scanner
         };
 
         {
-            JobQueue queue{ getJobScheduler(), 20, processTracks, 1, 0.85F };
+            JobQueue queue{ getJobScheduler(), processTracks };
 
             db::TrackId lastRetrievedTrackId;
             db::IdRange<db::TrackId> trackIdRange;

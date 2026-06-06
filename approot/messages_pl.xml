@@ -6,6 +6,7 @@
 <message id="Lms.add">Dodaj</message>
 <message id="Lms.administration">Zarządzanie</message>
 <message id="Lms.cancel">Cofnij</message>
+<message id="Lms.copy">Kopiuj</message>
 <message id="Lms.clusters">Znaczniki</message>
 <message id="Lms.create">Utwórz</message>
 <message id="Lms.delete">Usuń</message>
@@ -95,13 +96,15 @@
 <message id="Lms.Admin.Database.misc">Różne</message>
 <message id="Lms.Admin.Database.monthly">Co miesiąc</message>
 <message id="Lms.Admin.Database.never">Nigdy</message>
+<message id="Lms.Admin.Database.recommendation-engine-not-supported">Ten silnik nie jest obsługiwany</message>
+<message id="Lms.Admin.Database.recommendation-engine-type">Silnik rekomendacji</message>
+<message id="Lms.Admin.Database.recommendation-engine-type.audio-similarity">Podobieństwo audio</message>
+<message id="Lms.Admin.Database.recommendation-engine-type.clusters">Tagi</message>
+<message id="Lms.Admin.Database.recommendation-engine-type.none">Żadna</message>
 <message id="Lms.Admin.Database.scan-aborted">Skanowanie przerwane!</message>
 <message id="Lms.Admin.Database.scan-complete">Skanowanie ukończone: {1} wszystkich plików, {2} dodane, {3} zmienione, {4} usunięte, {5} duplikaty, {6} błędy</message>
 <message id="Lms.Admin.Database.scan-launched">Skanowanie uruchomione!</message>
 <message id="Lms.Admin.Database.scan-settings">Ustawienia skanowania</message>
-<message id="Lms.Admin.Database.similarity-engine-type">Metoda sprawdzania podobieństwa</message>
-<message id="Lms.Admin.Database.similarity-engine-type.clusters">Oparta o znaczniki</message>
-<message id="Lms.Admin.Database.similarity-engine-type.none">Żadna</message>
 <message id="Lms.Admin.Database.skip-single-release-playlists">Pomiń playlisty zawierające utwory z tego samego albumu</message>
 <message id="Lms.Admin.Database.tag-delimiter-must-not-contain-only-spaces">Rozdzielacz nie może się składać z samych białych znaków</message>
 <message id="Lms.Admin.Database.tag-parsing">Analiza tagów</message>
@@ -112,6 +115,7 @@
 <!--Scanner Controller-->
 <message id="Lms.Admin.ScannerController.bad-duration">Nie udało się ustalić długości ścieżki</message>
 <message id="Lms.Admin.ScannerController.bad-embedded-image">Nie można odczytać obrazu pod indeksem {1} : {2}</message>
+<message id="Lms.Admin.ScannerController.cannot-extract-musicnn-embeddings">Nie można wyodrębnić embeddingów MusicNN: {1}</message>
 <message id="Lms.Admin.ScannerController.cannot-read-artist-info-file">Nie można przetworzyć pliku z informacjami o artyście"</message>
 <message id="Lms.Admin.ScannerController.cannot-read-audio-file">Nie można przeanalizować pliku audio</message>
 <message id="Lms.Admin.ScannerController.cannot-read-file">Nie udało się odczytać pliku ({1})</message>
@@ -150,6 +154,7 @@
 <message id="Lms.Admin.ScannerController.status-in-progress">Skanowanie: krok {1}/{2}</message>
 <message id="Lms.Admin.ScannerController.step-associating-artist-images">Kojarzenie obrazów artystów: {1}%...</message>
 <message id="Lms.Admin.ScannerController.step-associating-external-lyrics">Kojarzenie zewnętrznych tekstów: {1}%...</message>
+<message id="Lms.Admin.ScannerController.step-associating-playlist-images">Kojarzenie obrazów playlist: {1}%...</message>
 <message id="Lms.Admin.ScannerController.step-associating-playlist-tracks">Kojarzenie utworów z playlisty: {1}%...</message>
 <message id="Lms.Admin.ScannerController.step-associating-release-images">Kojarzenie obrazów albumów: {1}%...</message>
 <message id="Lms.Admin.ScannerController.step-associating-track-images">Kojarzenie obrazów ścieżek: {1}%...</message>
@@ -161,9 +166,10 @@
 <message id="Lms.Admin.ScannerController.step-checking-for-removed-files">Sprawdzanie plików... {1}%</message>
 <message id="Lms.Admin.ScannerController.step-compact">Prasowanie bazy danych...</message>
 <message id="Lms.Admin.ScannerController.step-compute-cluster-stats">Obliczanie statystyk... {1}%</message>
+<message id="Lms.Admin.ScannerController.step-extract-musicnn-embeddings">Ekstrakcja embeddingów MusicNN: {1} z {2} plików ({3}%)</message>
 <message id="Lms.Admin.ScannerController.step-optimize">Optymalizowanie bazy danych... {1}%...</message>
 <message id="Lms.Admin.ScannerController.step-reconciliate-artists">Uzgodnianie artystów: {1} wpisów...</message>
-<message id="Lms.Admin.ScannerController.step-reloading-similarity-engine">Przeładowywanie silnika podobieństw: {1}%...</message>
+<message id="Lms.Admin.ScannerController.step-reloading-recommendation-engine">Przeładowywanie silnika rekomendacji: {1}%...</message>
 <message id="Lms.Admin.ScannerController.step-removing-orphaned-entries">Usuwanie osieroconych wpisów: {1} wpisów...</message>
 <message id="Lms.Admin.ScannerController.step-scanning-files">
 	<plural case="0">Analiza bibliotek: {1} plik</plural>
@@ -177,7 +183,7 @@
 <message id="Lms.Admin.DebugTools.debug-tools">Narzędzia debugowania</message>
 
 <!--Db-->
-<message id="Lms.Admin.DebugTools.Db.export-query-plans">Eksportuj plany zapytań</message>
+<message id="Lms.Admin.DebugTools.Db.export-query-profiling">Eksportuj dane profilowania zapytań</message>
 <message id="Lms.Admin.DebugTools.Db.db">Baza danych</message>
 
 <!--Tracing-->
@@ -303,13 +309,13 @@
 <!--Explore:Artist-->
 <message id="Lms.Explore.Artist.appears-on">Pojawia się na</message>
 <message id="Lms.Explore.Artist.biography">Biografia</message>
-<message id="Lms.Explore.Artist.similar-artists">Podobni artyści</message>
+<message id="Lms.Explore.Artist.related-artists">Powiązani artyści</message>
 
 <!--Explore:Release-->
 <message id="Lms.Explore.Release.copyright">Prawa autorskie</message>
 <message id="Lms.Explore.Release.disc">Dysk {1}</message>
 <message id="Lms.Explore.Release.other-versions">Inne wersje</message>
-<message id="Lms.Explore.Release.similar-releases">Podobne albumy</message>
+<message id="Lms.Explore.Release.related-releases">Powiązane albumy</message>
 <message id="Lms.Explore.Release.type">Typ</message>
 <message id="Lms.Explore.Release.type-primary-album">Album</message>
 <message id="Lms.Explore.Release.type-primary-broadcast">Audycja</message>
@@ -375,13 +381,24 @@
 <message id="Lms.Settings.enable-transcoding-by-default">Aktywuj domyślnie transkodowanie</message>
 <message id="Lms.Settings.feedback">Feedback</message>
 <message id="Lms.Settings.inline-artist-relationships">Typy powiązań artystów do wyświetlenia</message>  
-<message id="Lms.Settings.menu-settings"><i class="fa fa-fw fa-cog" aria-hidden="true"></i> Ustawienia</message>
+<message id="Lms.Settings.menu-ui"><i class="fa fa-fw fa-paint-brush" aria-hidden="true"></i> Interfejs użytkownika</message>
+<message id="Lms.Settings.menu-audio"><i class="fa fa-fw fa-music" aria-hidden="true"></i> Dźwięk</message>
+<message id="Lms.Settings.menu-subsonic"><i class="fa fa-fw fa-key" aria-hidden="true"></i> API Subsonic</message>
+<message id="Lms.Settings.menu-services"><i class="fa fa-fw fa-exchange" aria-hidden="true"></i> Usługi</message>
+<message id="Lms.Settings.menu-password"><i class="fa fa-fw fa-lock" aria-hidden="true"></i> Zmień hasło</message>
 <message id="Lms.Settings.name">Nazwa albumu</message>
 <message id="Lms.Settings.original-date-asc">Oryginalna data wydania (Rosnąco)</message>
 <message id="Lms.Settings.original-date-desc">Oryginalna data wydania (Malejąco)</message>
 <message id="Lms.Settings.password-bad">Błędne hasło</message>
 <message id="Lms.Settings.password-must-fill-old-password">Należy podać stare hasło</message>
-<message id="Lms.Settings.regen-token">Generuj</message>
+<message id="Lms.Settings.generate-token">Generuj</message>
+<message id="Lms.Settings.subsonic-token-copied">Klucz API skopiowany do schowka!</message>
+<message id="Lms.Settings.subsonic-token-del-confirm">Usuń</message>
+<message id="Lms.Settings.subsonic-token-del-confirm-body">Usunięcie klucza rozłączy wszystkich klientów, którzy aktualnie go używają.</message>
+<message id="Lms.Settings.subsonic-token-del-confirm-title">Usunąć klucz API?</message>
+<message id="Lms.Settings.subsonic-token-regen-confirm">Regeneruj</message>
+<message id="Lms.Settings.subsonic-token-regen-confirm-body">Wygenerowanie nowego klucza spowoduje unieważnienie wszystkich klientów korzystających z istniejącego klucza.</message>
+<message id="Lms.Settings.subsonic-token-regen-confirm-title">Regenerować klucz API?</message>
 <message id="Lms.Settings.replaygain-mode">Tryb ReplayGain</message>
 <message id="Lms.Settings.replaygain-mode.none">Bez ReplayGain</message>
 <message id="Lms.Settings.replaygain-mode.auto">Auto</message>

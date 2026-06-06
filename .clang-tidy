@@ -1,5 +1,27 @@
 ---
-Checks:          '-*,bugprone-*,concurrency-*,cppcoreguidelines-*,misc-*,-misc-include-cleaner,-misc-no-recursion,performance*,portability-*,readability-*,-readability-braces-around-statements,-readability-identifier-length,-readability-implicit-bool-conversion'
+Checks:          >
+  -*,
+  bugprone-*,
+  concurrency-*,
+
+  cppcoreguidelines-*,
+  -cppcoreguidelines-pro-bounds-constant-array-index,
+  -cppcoreguidelines-avoid-magic-numbers,
+  -cppcoreguidelines-avoid-c-arrays,
+
+  misc-*,
+  -misc-include-cleaner,
+  -misc-no-recursion,
+
+  performance*,
+  portability-*,
+
+  readability-*,
+  -readability-braces-around-statements,
+  -readability-identifier-length,
+  -readability-implicit-bool-conversion,
+  -readability-magic-numbers,
+
 WarningsAsErrors: ''
 HeaderFilterRegex: ''
 FormatStyle:     none

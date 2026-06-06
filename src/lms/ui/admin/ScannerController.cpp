@@ -178,6 +178,11 @@ namespace lms::ui
                                      .arg(stepStats.progress()));
             break;
 
+        case ScanStep::AssociatePlayListImages:
+            _stepStatus->setText(Wt::WString::tr("Lms.Admin.ScannerController.step-associating-playlist-images")
+                                     .arg(stepStats.progress()));
+            break;
+
         case ScanStep::AssociatePlayListTracks:
             _stepStatus->setText(Wt::WString::tr("Lms.Admin.ScannerController.step-associating-playlist-tracks")
                                      .arg(stepStats.progress()));
@@ -212,6 +217,13 @@ namespace lms::ui
                                      .arg(stepStats.progress()));
             break;
 
+        case ScanStep::ExtractMusicNNEmbeddings:
+            _stepStatus->setText(Wt::WString::tr("Lms.Admin.ScannerController.step-extract-musicnn-embeddings")
+                                     .arg(stepStats.processedElems)
+                                     .arg(stepStats.totalElems)
+                                     .arg(stepStats.progress()));
+            break;
+
         case ScanStep::Optimize:
             _stepStatus->setText(Wt::WString::tr("Lms.Admin.ScannerController.step-optimize")
                                      .arg(stepStats.progress()));
@@ -227,8 +239,8 @@ namespace lms::ui
                                      .arg(stepStats.processedElems));
             break;
 
-        case ScanStep::ReloadSimilarityEngine:
-            _stepStatus->setText(Wt::WString::tr("Lms.Admin.ScannerController.step-reloading-similarity-engine")
+        case ScanStep::ReloadRecommendationEngine:
+            _stepStatus->setText(Wt::WString::tr("Lms.Admin.ScannerController.step-reloading-recommendation-engine")
                                      .arg(stepStats.progress()));
             break;
 

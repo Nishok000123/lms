@@ -47,6 +47,7 @@ namespace lms::scanner
     {
         AssociateArtistImages,
         AssociateExternalLyrics,
+        AssociatePlayListImages,
         AssociatePlayListTracks,
         AssociateReleaseImages,
         AssociateTrackImages,
@@ -54,9 +55,10 @@ namespace lms::scanner
         CheckForRemovedFiles,
         ComputeClusterStats,
         Compact,
+        ExtractMusicNNEmbeddings,
         Optimize,
         ReconciliateArtists,
-        ReloadSimilarityEngine,
+        ReloadRecommendationEngine,
         RemoveOrphanedDbEntries,
         ScanFiles,
         UpdateLibraryFields,
@@ -92,7 +94,7 @@ namespace lms::scanner
         std::size_t updates{};   // updated file in DB
         std::size_t failures{};  // scan failure
 
-        std::size_t featuresFetched{}; // features fetched in DB
+        std::size_t featureExtractions{}; // features extracted in DB
 
         static constexpr std::size_t maxStoredErrorCount{ 5'000 }; // TODO make this configurable
         std::vector<std::shared_ptr<ScanError>> errors;

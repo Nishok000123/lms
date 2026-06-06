@@ -93,4 +93,6 @@ namespace lms::ui::utils
     std::map<Wt::WString, std::vector<db::ObjectPtr<db::Artist>>> getTrackArtistsByRole(db::ObjectPtr<db::Release> release);
 
     std::unique_ptr<Wt::WInteractWidget> createCopyright(std::string_view copyright, std::string_view copyrightURL);
+
+    void copyToClipboard(std::string_view text);
 } // namespace lms::ui::utils

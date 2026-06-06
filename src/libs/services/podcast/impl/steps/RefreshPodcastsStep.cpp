@@ -36,18 +36,17 @@ namespace lms::podcast
 {
     namespace
     {
-        void removeArtwork(db::Session& session, const db::Artwork::pointer& artwork)
+        void removeArtwork(const db::Artwork::pointer& artwork)
         {
-            const auto underlyingImageId{ artwork->getUnderlyingId() };
-            const auto* imageId{ std::get_if<db::ImageId>(&underlyingImageId) };
-            assert(imageId); // these artworks can only be an image
+            db::Image::pointer image{ artwork->getImage() };
+            assert(image); // these artworks can only be an image
 
             std::error_code ec;
             std::filesystem::remove(artwork->getAbsoluteFilePath(), ec);
             if (ec)
                 LMS_LOG(PODCAST, WARNING, "Failed to remove old podcast artwork file '" << artwork->getAbsoluteFilePath() << "': " << ec.message());
 
-            session.destroy<db::Image>(*imageId);
+            image.remove();
         }
 
         void updatePodcast(db::Session& session, db::PodcastId podcastId, const Podcast& podcast)
@@ -83,7 +82,10 @@ namespace lms::podcast
             {
                 LMS_LOG(PODCAST, INFO, "Podcast '" << podcast.title << "' : image url changed from '" << previousUrl << "' to '" << podcast.imageUrl << "'");
                 if (db::Artwork::pointer currentArtwork{ dbPodcast->getArtwork() })
-                    removeArtwork(session, currentArtwork);
+                {
+                    removeArtwork(currentArtwork);
+                    dbPodcast.modify()->setArtwork({});
+                }
 
                 dbPodcast.modify()->setImageUrl(podcast.imageUrl);
             }

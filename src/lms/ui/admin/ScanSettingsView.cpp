@@ -44,6 +44,39 @@ namespace lms::ui
 {
     namespace
     {
+        using RecommendationEngineTypeModel = ValueStringModel<db::ScanSettings::RecommendationEngineType>;
+
+        class RecommendationEngineValidator : public Wt::WValidator
+        {
+        public:
+            RecommendationEngineValidator(std::shared_ptr<RecommendationEngineTypeModel> model)
+                : _model{ model }
+            {
+            }
+
+        private:
+            Wt::WValidator::Result validate(const Wt::WString& input) const override
+            {
+                if (input.empty())
+                    return Wt::WValidator::validate(input);
+
+                std::string inputStr{ input.toUTF8() };
+
+                const auto row{ _model->getRowFromString(inputStr) };
+                if (row && _model->getValue(*row) == db::ScanSettings::RecommendationEngineType::AudioSimilarity)
+                {
+                    if (!core::Service<recommendation::IRecommendationService>::get()->isEngineTypeSupported(recommendation::EngineType::AudioSimilarity))
+                        return Wt::WValidator::Result{ Wt::ValidationState::Invalid, Wt::WString::tr("Lms.Admin.Database.recommendation-engine-not-supported") };
+                }
+
+                return Wt::WValidator::Result{ Wt::ValidationState::Valid };
+            }
+
+            std::string javaScriptValidate() const override { return {}; }
+
+            std::shared_ptr<RecommendationEngineTypeModel> _model;
+        };
+
         class TagDelimitersValidator : public Wt::WValidator
         {
         private:
@@ -67,7 +100,7 @@ namespace lms::ui
         public:
             static inline constexpr Field UpdatePeriodField{ "update-period" };
             static inline constexpr Field UpdateStartTimeField{ "update-start-time" };
-            static inline constexpr Field SimilarityEngineTypeField{ "similarity-engine-type" };
+            static inline constexpr Field RecommendationEngineTypeField{ "recommendation-engine-type" };
             static inline constexpr Field SkipSingleReleasePlayListsField{ "skip-single-release-playlists" };
             static inline constexpr Field AllowMBIDArtistMergeField{ "allow-mbid-artist-merge" };
             static inline constexpr Field ArtistImageFallbackToReleaseField{ "artist-image-fallback-to-release" };
@@ -81,7 +114,7 @@ namespace lms::ui
 
                 addField(UpdatePeriodField);
                 addField(UpdateStartTimeField);
-                addField(SimilarityEngineTypeField);
+                addField(RecommendationEngineTypeField);
                 addField(SkipSingleReleasePlayListsField);
                 addField(AllowMBIDArtistMergeField);
                 addField(ArtistImageFallbackToReleaseField);
@@ -89,7 +122,13 @@ namespace lms::ui
 
                 setValidator(UpdatePeriodField, createMandatoryValidator());
                 setValidator(UpdateStartTimeField, createMandatoryValidator());
-                setValidator(SimilarityEngineTypeField, createMandatoryValidator());
+
+                {
+                    std::shared_ptr<Wt::WValidator> recommendationEngineValidator{ std::make_shared<RecommendationEngineValidator>(_recommendationEngineTypeModel) };
+                    recommendationEngineValidator->setMandatory(true);
+                    setValidator(RecommendationEngineTypeField, recommendationEngineValidator);
+                }
+
                 setValidator(SkipSingleReleasePlayListsField, createMandatoryValidator());
                 setValidator(AllowMBIDArtistMergeField, createMandatoryValidator());
                 setValidator(ArtistImageFallbackToReleaseField, createMandatoryValidator());
@@ -97,7 +136,7 @@ namespace lms::ui
 
             std::shared_ptr<UpdatePeriodModel> updatePeriodModel() { return _updatePeriodModel; }
             std::shared_ptr<Wt::WAbstractItemModel> updateStartTimeModel() { return _updateStartTimeModel; }
-            std::shared_ptr<Wt::WAbstractItemModel> similarityEngineTypeModel() { return _similarityEngineTypeModel; }
+            std::shared_ptr<Wt::WAbstractItemModel> recommendationEngineTypeModel() { return _recommendationEngineTypeModel; }
 
             void loadData(std::vector<std::string>& extraTagsToScan, std::vector<std::string>& artistDelimiters, std::vector<std::string>& defaultDelimiters)
             {
@@ -123,9 +162,9 @@ namespace lms::ui
                 setValue(AllowMBIDArtistMergeField, scanSettings->getAllowMBIDArtistMerge());
                 setValue(ArtistImageFallbackToReleaseField, scanSettings->getArtistImageFallbackToReleaseField());
 
-                auto similarityEngineTypeRow{ _similarityEngineTypeModel->getRowFromValue(scanSettings->getSimilarityEngineType()) };
-                if (similarityEngineTypeRow)
-                    setValue(SimilarityEngineTypeField, _similarityEngineTypeModel->getString(*similarityEngineTypeRow));
+                auto recommendationEngineTypeRow{ _recommendationEngineTypeModel->getRowFromValue(scanSettings->getRecommendationEngineType()) };
+                if (recommendationEngineTypeRow)
+                    setValue(RecommendationEngineTypeField, _recommendationEngineTypeModel->getString(*recommendationEngineTypeRow));
 
                 const auto extraTags{ scanSettings->getExtraTagsToScan() };
                 extraTagsToScan.clear();
@@ -175,9 +214,9 @@ namespace lms::ui
                 }
 
                 {
-                    const auto similarityEngineTypeRow{ _similarityEngineTypeModel->getRowFromString(valueText(SimilarityEngineTypeField)) };
-                    if (similarityEngineTypeRow)
-                        scanSettings.modify()->setSimilarityEngineType(_similarityEngineTypeModel->getValue(*similarityEngineTypeRow));
+                    const auto recommendationEngineTypeRow{ _recommendationEngineTypeModel->getRowFromString(valueText(RecommendationEngineTypeField)) };
+                    if (recommendationEngineTypeRow)
+                        scanSettings.modify()->setRecommendationEngineType(_recommendationEngineTypeModel->getValue(*recommendationEngineTypeRow));
                 }
 
                 scanSettings.modify()->setExtraTagsToScan(extraTagsToScan);
@@ -192,8 +231,7 @@ namespace lms::ui
             }
 
         private:
-            void
-            initializeModels()
+            void initializeModels()
             {
                 _updatePeriodModel = std::make_shared<ValueStringModel<db::ScanSettings::UpdatePeriod>>();
                 _updatePeriodModel->add(Wt::WString::tr("Lms.Admin.Database.never"), db::ScanSettings::UpdatePeriod::Never);
@@ -203,20 +241,21 @@ namespace lms::ui
                 _updatePeriodModel->add(Wt::WString::tr("Lms.Admin.Database.monthly"), db::ScanSettings::UpdatePeriod::Monthly);
 
                 _updateStartTimeModel = std::make_shared<ValueStringModel<Wt::WTime>>();
-                for (std::size_t i = 0; i < 24; ++i)
+                for (std::size_t i{}; i < 24; ++i)
                 {
                     Wt::WTime time{ static_cast<int>(i), 0 };
                     _updateStartTimeModel->add(time.toString(), time);
                 }
 
-                _similarityEngineTypeModel = std::make_shared<ValueStringModel<db::ScanSettings::SimilarityEngineType>>();
-                _similarityEngineTypeModel->add(Wt::WString::tr("Lms.Admin.Database.similarity-engine-type.clusters"), db::ScanSettings::SimilarityEngineType::Clusters);
-                _similarityEngineTypeModel->add(Wt::WString::tr("Lms.Admin.Database.similarity-engine-type.none"), db::ScanSettings::SimilarityEngineType::None);
+                _recommendationEngineTypeModel = std::make_shared<ValueStringModel<db::ScanSettings::RecommendationEngineType>>();
+                _recommendationEngineTypeModel->add(Wt::WString::tr("Lms.Admin.Database.recommendation-engine-type.audio-similarity"), db::ScanSettings::RecommendationEngineType::AudioSimilarity);
+                _recommendationEngineTypeModel->add(Wt::WString::tr("Lms.Admin.Database.recommendation-engine-type.clusters"), db::ScanSettings::RecommendationEngineType::Clusters);
+                _recommendationEngineTypeModel->add(Wt::WString::tr("Lms.Admin.Database.recommendation-engine-type.none"), db::ScanSettings::RecommendationEngineType::None);
             }
 
             std::shared_ptr<UpdatePeriodModel> _updatePeriodModel;
             std::shared_ptr<ValueStringModel<Wt::WTime>> _updateStartTimeModel;
-            std::shared_ptr<ValueStringModel<db::ScanSettings::SimilarityEngineType>> _similarityEngineTypeModel;
+            std::shared_ptr<RecommendationEngineTypeModel> _recommendationEngineTypeModel;
         };
 
         class LineEditEntryModel : public Wt::WFormModel
@@ -225,7 +264,6 @@ namespace lms::ui
             static inline constexpr Field ValueField{ "value" };
 
             LineEditEntryModel(const Wt::WString& initialValue, std::shared_ptr<Wt::WValidator> validator)
-                : Wt::WFormModel()
             {
                 addField(ValueField);
 
@@ -381,10 +419,10 @@ namespace lms::ui
         // Allow to fallback on release image if artist image is not available
         t->setFormWidget(DatabaseSettingsModel::ArtistImageFallbackToReleaseField, std::make_unique<Wt::WCheckBox>());
 
-        // Similarity engine type
-        auto similarityEngineType{ std::make_unique<Wt::WComboBox>() };
-        similarityEngineType->setModel(model->similarityEngineTypeModel());
-        t->setFormWidget(DatabaseSettingsModel::SimilarityEngineTypeField, std::move(similarityEngineType));
+        // Recommendation engine type
+        auto recommendationEngineType{ std::make_unique<Wt::WComboBox>() };
+        recommendationEngineType->setModel(model->recommendationEngineTypeModel());
+        t->setFormWidget(DatabaseSettingsModel::RecommendationEngineTypeField, std::move(recommendationEngineType));
 
         // Extra tags
         std::shared_ptr<Wt::WValidator> extraTagValidator{ createUppercaseValidator() };
@@ -490,7 +528,7 @@ namespace lms::ui
 
                 model->saveData(extraTagViews, artistDelimiterViews, defaultDelimiterViews);
 
-                core::Service<recommendation::IRecommendationService>::get()->load();
+                core::Service<recommendation::IRecommendationService>::get()->requestReload();
                 // Don't want the scanner to go on with wrong settings
                 core::Service<scanner::IScannerService>::get()->requestReload();
                 LmsApp->notifyMsg(Notification::Type::Info, Wt::WString::tr("Lms.settings-saved"));

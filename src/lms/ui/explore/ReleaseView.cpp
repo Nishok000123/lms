@@ -19,6 +19,7 @@
 
 #include "ReleaseView.hpp"
 
+#include <algorithm>
 #include <map>
 #include <string>
 
@@ -231,7 +232,12 @@ namespace lms::ui
         if (!releaseId)
             throw ReleaseNotFoundException{};
 
-        auto similarReleasesIds{ core::Service<recommendation::IRecommendationService>::get()->getSimilarReleases(*releaseId, 5) };
+        const auto similarReleases{ core::Service<recommendation::IRecommendationService>::get()->findSimilarReleases(*releaseId, 5) };
+        std::vector<db::ReleaseId> similarReleasesIds;
+        similarReleasesIds.reserve(similarReleases.size());
+        std::transform(std::cbegin(similarReleases), std::cend(similarReleases), std::back_inserter(similarReleasesIds), [](const auto& result) {
+            return result.id;
+        });
 
         auto& session{ LmsApp->getDbSession() };
         auto transaction{ session.createReadTransaction() };
@@ -246,7 +252,7 @@ namespace lms::ui
         refreshCopyright(release);
         refreshLinks(release);
         refreshOtherVersions(release);
-        refreshSimilarReleases(similarReleasesIds);
+        refreshRelatedReleases(similarReleasesIds);
 
         bindString("name", Wt::WString::fromUTF8(std::string{ release->getName() }), Wt::TextFormat::Plain);
         if (std::string_view comment{ release->getComment() }; !comment.empty())
@@ -582,13 +588,13 @@ namespace lms::ui
         }
     }
 
-    void Release::refreshSimilarReleases(const std::vector<db::ReleaseId>& similarReleaseIds)
+    void Release::refreshRelatedReleases(const std::vector<db::ReleaseId>& similarReleaseIds)
     {
         if (similarReleaseIds.empty())
             return;
 
-        setCondition("if-has-similar-releases", true);
-        auto* similarReleasesContainer{ bindNew<Wt::WContainerWidget>("similar-releases") };
+        setCondition("if-has-related-releases", true);
+        auto* similarReleasesContainer{ bindNew<Wt::WContainerWidget>("related-releases") };
 
         for (const db::ReleaseId id : similarReleaseIds)
         {
